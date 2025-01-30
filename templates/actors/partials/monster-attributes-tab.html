@@ -3,8 +3,7 @@
         <div class="flexrow">
             <ul class="attributes">
                 <li class="attribute health">
-                    <h4 class="attribute-name box-title" title="{{localize 'WWN.Health'}}">{{ localize "WWN.HealthShort"
-                        }}
+                    <h4 class="attribute-name box-title" title="{{localize 'WWN.Health'}}">{{ localize "WWN.HealthShort" }}
                         <a class="hp-roll"><i class="fas fa-dice"></i></a>
                     </h4>
                     <div class="attribute-value flexrow">
@@ -12,6 +11,16 @@
                             placeholder="0" />
                         <span class="sep"> / </span>
                         <input name="system.hp.max" type="text" value="{{system.hp.max}}" data-dtype="Number"
+                            placeholder="0" />
+                    </div>
+                </li>
+                <li class="attribute wounds">
+                    <h4 class="attribute-name box-title" title="{{localize 'WWN.WoundPoints'}}">{{ localize "WWN.WoundPointsShort" }}</h4>
+                    <div class="attribute-value flexrow">
+                        <input name="system.wp.value" type="number" value="{{system.wp.value}}" data-dtype="Number"
+                            placeholder="0" />
+                        <span class="sep"> / </span>
+                        <input name="system.wp.max" type="text" value="{{system.wp.max}}" data-dtype="Number"
                             placeholder="0" />
                     </div>
                 </li>
