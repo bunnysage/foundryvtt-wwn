@@ -121,6 +121,19 @@
         </div>
       </li>
       <li class="attribute ability-score">
+        <h4 class="attribute-name box-title" title="Wound Points">
+          WP
+        </h4>
+        <div class="attribute-value">
+          <input name="system.wp.value" type="number" value="{{system.wp.value}}" data-dtype="Number" placeholder=0
+            title="Wound Points" />
+        </div>
+        <div class="attribute-value attribute-mod">
+          <input name="system.wp.max" type="number" value="{{system.wp.max}}" data-dtype="Number" placeholder=0
+            title="Maximum Wound Points" />
+        </div>
+      </li>
+      <li class="attribute ability-score">
         <h4 class="attribute-name box-title" title="{{ localize 'WWN.ArmorClass' }}">
           {{ localize "WWN.ArmorClassShort" }}
         </h4>
