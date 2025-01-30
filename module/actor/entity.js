@@ -611,19 +611,25 @@ export class WwnActor extends Actor {
   async applyDamage(amount = 0, multiplier = 1) {
     amount = Math.floor(parseInt(amount) * multiplier);
     const hp = this.system.hp;
-    const excessDamage =
-      hp.value - amount < 0 ? Math.abs(hp.value - amount) : 0;
+    const wp = this.system.wp;
+    let newWp = wp?.value ?? 0; // Use optional chaining and nullish coalescing
+
+    const excessDamage = hp.value - amount < 0 ? Math.abs(hp.value - amount) : 0;
 
     // Remaining goes to health
     const dh = Math.clamp(hp.value - amount, 0, hp.max);
 
     if (game.settings.get("wwn", "replaceStrainWithWounds") && this.type === "character" && excessDamage > 0) {
-      this.applyWounds(excessDamage);
+        this.applyWounds(excessDamage);
+    } else if (this.type === "character" && excessDamage > 0) {
+        // Apply excess damage to wound points if character
+        newWp = Math.clamp(wp.value - excessDamage, 0, wp.max);
     }
 
     // Update the Actor
     return this.update({
-      "system.hp.value": dh,
+        "system.hp.value": dh,
+        "system.wp.value": newWp,
     });
   }
 
