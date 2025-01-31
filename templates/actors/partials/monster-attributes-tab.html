@@ -14,8 +14,11 @@
                             placeholder="0" />
                     </div>
                 </li>
+                {{#if config.enableWoundPoints}}
                 <li class="attribute wounds">
-                    <h4 class="attribute-name box-title" title="{{localize 'WWN.WoundPoints'}}">{{ localize "WWN.WoundPointsShort" }}</h4>
+                    <h4 class="attribute-name box-title" title="Wound Points">
+                        WP
+                      </h4>
                     <div class="attribute-value flexrow">
                         <input name="system.wp.value" type="number" value="{{system.wp.value}}" data-dtype="Number"
                             placeholder="0" />
@@ -24,6 +27,7 @@
                             placeholder="0" />
                     </div>
                 </li>
+                {{/if}}
                 <li class="attribute morale-check">
                     <h4 class="attribute-name box-title"><a>{{ localize "WWN.details.morale" }}</a>
                     </h4>

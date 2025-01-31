@@ -621,7 +621,7 @@ export class WwnActor extends Actor {
 
     if (game.settings.get("wwn", "replaceStrainWithWounds") && this.type === "character" && excessDamage > 0) {
         this.applyWounds(excessDamage);
-    } else if (this.type === "character" && excessDamage > 0) {
+    } else if (game.settings.get("wwn", "enableWoundPoints") && (this.type === "character" || this.type === "monster") && excessDamage > 0) {
         // Apply excess damage to wound points if character
         newWp = Math.clamp(wp.value - excessDamage, 0, wp.max);
     }

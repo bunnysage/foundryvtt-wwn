@@ -120,6 +120,7 @@
             title="{{ localize 'WWN.HealthMax' }}" />
         </div>
       </li>
+      {{#if config.enableWoundPoints}}
       <li class="attribute ability-score">
         <h4 class="attribute-name box-title" title="Wound Points">
           WP
@@ -133,6 +134,7 @@
             title="Maximum Wound Points" />
         </div>
       </li>
+      {{/if}}
       <li class="attribute ability-score">
         <h4 class="attribute-name box-title" title="{{ localize 'WWN.ArmorClass' }}">
           {{ localize "WWN.ArmorClassShort" }}
@@ -144,6 +146,20 @@
         <div class="attribute-value attribute-mod">
           <input name="system.aac.naked" type="number" value="{{system.aac.naked}}" data-dtype="Number" placeholder=0
             title="{{ localize 'WWN.ArmorClassNaked' }}" disabled />
+        </div>
+      </li>
+
+      <li class="attribute ability-score">
+        <h4 class="attribute-name box-title" title="{{ localize 'WWN.SystemStrainLong' }}">
+          {{ localize "WWN.SystemStrainShort" }}
+        </h4>
+        <div class="attribute-value">
+          <input name="system.details.strain.value" type="number" value="{{system.details.strain.value}}"
+            data-dtype="Number" placeholder=0 title="{{ localize 'WWN.SystemStrain' }}" />
+        </div>
+        <div class="attribute-value attribute-mod">
+          <input name="system.details.strain.max" type="number" value="{{system.details.strain.max}}"
+            data-dtype="Number" placeholder=0 title="{{ localize 'WWN.SystemStrainMax' }}" />
         </div>
       </li>
 
@@ -161,20 +177,6 @@
         <div class="attribute-value attribute-mod">
           <input name="system.hp.wounds" type="number" value="{{system.hp.wounds}}" data-dtype="Number" placeholder=0
             data-tooltip="Fatal Wounds. You have 3 rounds in which to remove all of your fatal wounds or perish." />
-        </div>
-      </li>
-      {{else}}
-      <li class="attribute ability-score">
-        <h4 class="attribute-name box-title" title="{{ localize 'WWN.SystemStrainLong' }}">
-          {{ localize "WWN.SystemStrainShort" }}
-        </h4>
-        <div class="attribute-value">
-          <input name="system.details.strain.value" type="number" value="{{system.details.strain.value}}"
-            data-dtype="Number" placeholder=0 title="{{ localize 'WWN.SystemStrain' }}" />
-        </div>
-        <div class="attribute-value attribute-mod">
-          <input name="system.details.strain.max" type="number" value="{{system.details.strain.max}}"
-            data-dtype="Number" placeholder=0 title="{{ localize 'WWN.SystemStrainMax' }}" />
         </div>
       </li>
       {{/if}}

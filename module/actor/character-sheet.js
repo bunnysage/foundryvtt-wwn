@@ -138,7 +138,7 @@ export class WwnActorSheetCharacter extends WwnActorSheet {
     data.config.replaceStrainWithWounds = game.settings.get("wwn", "replaceStrainWithWounds");
     data.config.xpPerChar = game.settings.get("wwn", "xpPerChar");
     data.config.medRange = game.settings.get("wwn", "medRange");
-
+    data.config.enableWoundPoints = game.settings.get("wwn", "enableWoundPoints");
     data.enrichedBiography = await TextEditor.enrichHTML(
       this.object.system.details.biography,
       { async: true }

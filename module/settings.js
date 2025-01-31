@@ -194,6 +194,16 @@ export const registerSettings = function () {
     requiresReload: false
   });
 
+  game.settings.register("wwn", "enableWoundPoints", {
+    name: "Enable Wound Points",
+    hint: "Enable the Wound Points (WP) mechanic from the WWN rulebook. When enabled, excess damage beyond HP will be applied to WP.",
+    default: false,
+    scope: "world", 
+    type: Boolean,
+    config: true,
+    requiresReload: false
+  });
+
   game.settings.register("wwn", "roundWeight", {
     name: "Round Weight Up",
     hint: "Round weight up to the nearest whole number, to most closely match WWN rules. If disabled, weight is not rounded.",
