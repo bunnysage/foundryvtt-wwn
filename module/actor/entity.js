@@ -723,7 +723,7 @@ export class WwnActor extends Actor {
     let newInjuries = 0;
     let newWounds = 0;
 
-    let content = `<p><b>Location: ${hitLocation[0]}.</b></p><p><b>Severity: ${woundResult}</b> (${woundMessage}) [CR: -${critResistance}]</p><p><b>${hitLocation[1]} for ${woundResult} days.</b> ${hitLocation[2]}*</p>`;
+    let content = `<p><b>Location: ${hitLocation[0]}.</b></p><p><b>Severity: ${woundResult}</b> (${woundMessage}) [CR: ${critResistance}]</p><p><b>${hitLocation[1]} for ${woundResult} days.</b> ${hitLocation[2]}*</p>`;
 
     if (woundResult >= 16) {
       newWounds += woundResult - 15;
