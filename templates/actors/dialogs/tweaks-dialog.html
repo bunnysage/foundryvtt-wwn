@@ -165,6 +165,14 @@
               data-dtype="Number" />
           </div>
         </div>
+        {{#if (eq this.type 'monster')}}
+        <div class="form-group">
+          <label for="useDetailed">Use Detailed Stats</label>
+          <div class="form-fields">
+            <input type="checkbox" name="system.config.useDetailed" id="useDetailed" {{checked system.config.useDetailed}} data-dtype="Boolean" />
+          </div>
+        </div>
+        {{/if}}
       </div>
     </div>
     <footer class="sheet-footer">

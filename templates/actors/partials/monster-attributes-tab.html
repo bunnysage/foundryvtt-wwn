@@ -28,19 +28,20 @@
                     </div>
                 </li>
                 {{/if}}
-                <li class="attribute ability-score">
+                {{#if system.config.useDetailed}}
+                <li class="attribute strain">
                     <h4 class="attribute-name box-title" title="{{ localize 'WWN.SystemStrainLong' }}">
                       {{ localize "WWN.SystemStrainShort" }}
                     </h4>
-                    <div class="attribute-value">
-                      <input name="system.details.strain.value" type="number" value="{{system.details.strain.value}}"
-                        data-dtype="Number" placeholder=0 title="{{ localize 'WWN.SystemStrain' }}" />
+                    <div class="attribute-value flexrow">
+                        <input name="system.details.strain.value" type="number" value="{{system.details.strain.value}}"
+                            data-dtype="Number" placeholder=0 title="{{ localize 'WWN.SystemStrain' }}" />
+                        <span class="sep"> / </span>
+                        <input name="system.details.strain.max" type="number" value="{{system.details.strain.max}}"
+                            data-dtype="Number" placeholder=0 title="{{ localize 'WWN.SystemStrainMax' }}" />
                     </div>
-                    <div class="attribute-value attribute-mod">
-                      <input name="system.details.strain.max" type="number" value="{{system.details.strain.max}}"
-                        data-dtype="Number" placeholder=0 title="{{ localize 'WWN.SystemStrainMax' }}" />
-                    </div>
-                  </li>
+                </li>
+                {{/if}}
                 <li class="attribute morale-check">
                     <h4 class="attribute-name box-title"><a>{{ localize "WWN.details.morale" }}</a>
                     </h4>
