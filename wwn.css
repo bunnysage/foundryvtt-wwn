@@ -43,6 +43,16 @@
 .wwn.sheet.actor .header-details .summary .check-field:hover .check {
   display: block;
 }
+.wwn.sheet.actor .header-details .summary .check-field {
+  flex: 0 0 80px;
+}
+.wwn.sheet.actor .header-details .summary .small-field {
+  flex: 0 0 50px;
+}
+.wwn.sheet.actor .header-details .summary .small-field input.small-input {
+  width: 30px;
+  text-align: center;
+}
 .wwn.sheet.actor .header-details .summary .check-field .check {
   display: none;
   line-height: 35px;

@@ -179,6 +179,7 @@
         "value": 4,
         "max": 4
       },
+      "critResistance": 0,
       "treasure": 0,
       "personalTreasure": 0,
       "skills": {
@@ -284,7 +285,8 @@
         "hd": "1d8",
         "value": 4,
         "max": 4
-      }
+      },
+      "critResistance": 0
     },
     "faction": {
       "description": "",

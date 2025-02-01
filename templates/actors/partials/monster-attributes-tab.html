@@ -18,13 +18,27 @@
                 <li class="attribute wounds">
                     <h4 class="attribute-name box-title" title="Wound Points">
                         WP
-                      </h4>
+                    </h4>
                     <div class="attribute-value flexrow">
                         <input name="system.wp.value" type="number" value="{{system.wp.value}}" data-dtype="Number"
                             placeholder="0" />
                         <span class="sep"> / </span>
                         <input name="system.wp.max" type="text" value="{{system.wp.max}}" data-dtype="Number"
                             placeholder="0" />
+                    </div>
+                </li>
+                {{/if}}
+                {{#if config.replaceStrainWithWounds}}
+                <li class="attribute wounds">
+                    <h4 class="attribute-name box-title" data-tooltip="Injuries and Fatal Wounds. Hover over each to see their effects.">
+                        I/W
+                    </h4>
+                    <div class="attribute-value flexrow">
+                        <input name="system.hp.injuries" type="number" value="{{system.hp.injuries}}" data-dtype="Number"
+                            placeholder="0" data-tooltip="Injuries. Damage in excess of your HP, along with your current injuries, are added to a die roll to determine the severity of your next injury." />
+                        <span class="sep"> / </span>
+                        <input name="system.hp.wounds" type="number" value="{{system.hp.wounds}}" data-dtype="Number"
+                            placeholder="0" data-tooltip="Fatal Wounds. You have 3 rounds in which to remove all of your fatal wounds or perish." />
                     </div>
                 </li>
                 {{/if}}

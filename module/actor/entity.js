@@ -612,7 +612,7 @@ export class WwnActor extends Actor {
     amount = Math.floor(parseInt(amount) * multiplier);
     const hp = this.system.hp;
     const wp = this.system.wp;
-    let newWp = wp?.value ?? 0; // Use optional chaining and nullish coalescing
+    let newWp = wp?.value ?? 0;
 
     const excessDamage = hp.value - amount < 0 ? Math.abs(hp.value - amount) : 0;
 
@@ -620,16 +620,16 @@ export class WwnActor extends Actor {
     const dh = Math.clamp(hp.value - amount, 0, hp.max);
 
     if (game.settings.get("wwn", "replaceStrainWithWounds") && (this.type === "character" || this.type === "monster") && excessDamage > 0) {
-        this.applyWounds(excessDamage);
+      this.applyWounds(excessDamage);
     } else if (game.settings.get("wwn", "enableWoundPoints") && (this.type === "character" || this.type === "monster") && excessDamage > 0) {
-        // Apply excess damage to wound points if character
-        newWp = Math.clamp(wp.value - excessDamage, 0, wp.max);
+      // Apply excess damage to wound points if character
+      newWp = Math.clamp(wp.value - excessDamage, 0, wp.max);
     }
 
     // Update the Actor
     return this.update({
-        "system.hp.value": dh,
-        "system.wp.value": newWp,
+      "system.hp.value": dh,
+      "system.wp.value": newWp,
     });
   }
 
@@ -713,8 +713,9 @@ export class WwnActor extends Actor {
     const hitLocation = locations[locationRoll.total];
     const currInjuries = this.system.hp.injuries || 0;
     const currWounds = this.system.hp.wounds || 0;
+    const critResistance = this.system.critResistance || 0;
     const woundRoll = await new Roll(
-      `1d12 + ${currInjuries} + ${excess}`
+      `1d12 + ${currInjuries} + ${excess} - ${critResistance}`
     ).evaluate();
     const woundMessage = woundRoll.result;
     const woundResult = woundRoll.total;
@@ -722,7 +723,7 @@ export class WwnActor extends Actor {
     let newInjuries = 0;
     let newWounds = 0;
 
-    let content = `<p><b>Location: ${hitLocation[0]}.</b></p><p><b>Severity: ${woundResult}</b> (${woundMessage})</p><p><b>${hitLocation[1]} for ${woundResult} days.</b> ${hitLocation[2]}*</p>`;
+    let content = `<p><b>Location: ${hitLocation[0]}.</b></p><p><b>Severity: ${woundResult}</b> (${woundMessage}) [CR: -${critResistance}]</p><p><b>${hitLocation[1]} for ${woundResult} days.</b> ${hitLocation[2]}*</p>`;
 
     if (woundResult >= 16) {
       newWounds += woundResult - 15;
@@ -784,6 +785,191 @@ export class WwnActor extends Actor {
     };
 
     ChatMessage.create(chatData, {});
+  }
+
+  /* -------------------------------------------- */
+  /*  Death and Dismemberment                     */
+  /* -------------------------------------------- */
+
+  async applyLethalDamage(amount, damageType = "normal") {
+    const hp = this.system.hp.value;
+    const lethalDamage = Math.max(0, amount - hp);
+    
+    if (lethalDamage <= 0) return;
+
+    const currentInjuries = this.system.hp.injuries || 0;
+    const critResistance = this.system.critResistance || 0;
+    
+    // Calculate severity
+    const severityRoll = await new Roll(`1d12 + ${lethalDamage} + ${currentInjuries * 2} - ${critResistance}`).evaluate();
+    const severity = severityRoll.total;
+
+    // Determine hit location and side
+    const locationRoll = await new Roll("1d4").evaluate();
+    let location, specificLocation;
+    
+    if (locationRoll.total <= 2) {
+      location = "limb";
+      const limbRoll = await new Roll("1d4").evaluate();
+      specificLocation = {
+        type: limbRoll.total <= 2 ? "arm" : "leg",
+        side: limbRoll.total % 2 ? "left" : "right"
+      };
+    } else {
+      location = locationRoll.total === 3 ? "torso" : "head";
+    }
+
+    // Get and apply effect
+    const effect = this.determineDismembermentEffect(damageType, location, severity);
+    
+    // Roll any needed durations
+    const durations = await this.rollDurations(effect);
+    
+    // Apply mechanical effects and create chat message
+    await this.applyDismembermentEffect(effect, {
+      severity,
+      location,
+      specificLocation,
+      damageType,
+      durations
+    });
+  }
+
+  determineDismembermentEffect(table, location, severity) {
+    const tables = {
+      normal: {
+        limb: [
+          [4, "Disarmed/Prone"],
+          [6, "Disabled 1d"],
+          [8, "Disabled 2d6d"],
+          [10, "Disabled 2d6w"],
+          [12, "Ruined"],
+          [Infinity, "Ruined+Dying"]
+        ],
+        torso: [
+          [4, "Winded"],
+          [6, "Gored 1d"],
+          [8, "Gored 2d6d"],
+          [10, "1d12 rnds: Dying"],
+          [12, "Gored 2d6w"],
+          [Infinity, "Crushed+Dying"]
+        ],
+        head: [
+          [4, "Dazed 1 rnd"],
+          [6, "Concussed 1d"],
+          [8, "KO'd 1d6 rnds"],
+          [10, "Concussed 2d6w"],
+          [12, "KO'd 1d6 min"],
+          [Infinity, "Cracked+Dying"]
+        ]
+      },
+      nonlethal: {
+        any: [
+          [4, "No injury"],
+          [6, "Dazed 1 rnd"],
+          [8, "KO'd 1d6 min"],
+          [10, "KO'd 1d6 min"],
+          [12, "KO'd 2d6 min"],
+          [Infinity, "KO'd 2d6 min"]
+        ]
+      },
+      fire: {
+        any: [
+          [4, "No injury"],
+          [6, "Burned 1d"],
+          [8, "Burned 2d6d"],
+          [10, "Burned 2d6w"],
+          [12, "Blinded 1d6d"],
+          [Infinity, "Burned+Blinded"]
+        ]
+      },
+      fall: {
+        any: [
+          [4, "Prone"],
+          [6, "Disabled 1d"],
+          [8, "Disabled 2d6d"],
+          [10, "Disabled 2d6w"],
+          [12, "Disabled 2d6w"],
+          [Infinity, "Dying"]
+        ]
+      }
+    };
+
+    // For non-normal damage types, use the 'any' location table
+    const tableConfig = tables[table][table === 'normal' ? location : 'any'];
+    for(let [threshold, effect] of tableConfig) {
+      if(severity <= threshold) return effect;
+    }
+    return "Instantly slain";
+  }
+
+  async rollDurations(effect) {
+    const durations = {};
+    
+    if (effect.includes("2d6d")) {
+      durations.days = await new Roll("2d6").evaluate();
+    } else if (effect.includes("2d6w")) {
+      durations.weeks = await new Roll("2d6").evaluate();
+    } else if (effect.includes("1d6")) {
+      durations.variable = await new Roll("1d6").evaluate();
+    } else if (effect.includes("1d12")) {
+      durations.variable = await new Roll("1d12").evaluate();
+    } else if (effect.includes("1d")) {
+      durations.days = 1;
+    }
+    
+    return durations;
+  }
+
+  async applyDismembermentEffect(effect, {severity, location, specificLocation, damageType, durations}) {
+    // Track injuries/wounds
+    let injuries = this.system.hp.injuries || 0;
+    injuries += 1;
+    
+    // Handle saving throws for specific effects
+    let saveResults = {};
+    
+    if (effect.includes("Ruined")) {
+      const save = await this.rollSave("physical");
+      saveResults.ruined = save.passed;
+    }
+    
+    if (effect.includes("Cracked") || effect.includes("Crushed")) {
+      const save = await this.rollSave("physical");
+      saveResults.permanent = save.passed;
+      
+      if (!save.passed) {
+        const roll = await new Roll("1d100").evaluate();
+        saveResults.coma = roll.total <= 30;
+      }
+    }
+
+    // Update actor
+    await this.update({
+      "system.hp.injuries": injuries,
+      "system.hp.dying": effect.includes("Dying")
+    });
+
+    // Create chat message
+    const templateData = {
+      actor: this.name,
+      effect,
+      severity,
+      location,
+      specificLocation,
+      damageType,
+      durations,
+      saveResults
+    };
+    
+    const html = await renderTemplate("systems/wwn/templates/chat/dismemberment.html", templateData);
+    
+    await ChatMessage.create({
+      user: game.user.id,
+      speaker: ChatMessage.getSpeaker({ actor: this }),
+      content: html,
+      type: CONST.CHAT_MESSAGE_TYPES.OTHER
+    });
   }
 
   static _valueFromTable(table, val) {
