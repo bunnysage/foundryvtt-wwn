@@ -267,7 +267,9 @@
       "hp": {
         "hd": "1d8",
         "value": 4,
-        "max": 4
+        "max": 4,
+        "injuries": 0,
+        "wounds": 0
       }
     },
     "faction": {

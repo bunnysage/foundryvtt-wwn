@@ -123,6 +123,7 @@ export class WwnActorSheetMonster extends WwnActorSheet {
 
     // Settings
     data.config.morale = game.settings.get("wwn", "morale");
+    data.config.replaceStrainWithWounds = game.settings.get("wwn", "replaceStrainWithWounds");
     if (!data.system.details.hasOwnProperty('instinctTable')) {
       data.system.details.instinctTable = {
         "table": "",
