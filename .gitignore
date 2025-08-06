@@ -7,3 +7,4 @@ foundry
 
 .DS_Store
 packs/*
+node_modules/*
