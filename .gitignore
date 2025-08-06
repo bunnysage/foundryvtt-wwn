@@ -12,3 +12,4 @@ packs/*/CURRENT
 packs/*/LOCK
 packs/*/*.log
 packs/.DS_Store
+packs/*
