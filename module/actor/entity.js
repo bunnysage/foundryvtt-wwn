@@ -426,19 +426,17 @@ export class WwnActor extends Actor {
       item: attData.item,
       roll: {
         type: "damage",
+        dmg: [],
       },
     };
 
     let dmgParts = [];
     if (!attData.roll.dmg) {
       dmgParts.push("1d6");
+      rollData.roll.dmg = ["1d6"];
     } else {
       dmgParts.push(attData.roll.dmg);
-    }
-
-    // Add Str to damage
-    if (attData.roll.type == "melee") {
-      dmgParts.push(data.scores.str.mod);
+      rollData.roll.dmg = [attData.roll.dmg];
     }
 
     // Damage roll
@@ -796,34 +794,25 @@ export class WwnActor extends Actor {
   }
 
   computeInit() {
-    let initValue = 0;
     let initRoll = "1d8";
-    const isGroupInit = game.settings.get("wwn", "initiative") === "group";
+    let initValue = this.system.initiative.mod;
     if (this.type == "character") {
-      const alert = this.items.find((i) => i.name === "Alert")?.system.ownedLevel || 0;
-      let alertBonus = alert === 2 ? 100 : alert;
-
-      if (isGroupInit) {
-        if (alert !== 1) {
-          initValue = this.system.scores.dex.mod + this.system.initiative.mod + alertBonus;
-          this.system.initiative.alertTwo = alert === 2 ? true : false;
-        } else {
-          initValue = this.system.scores.dex.mod + this.system.initiative.mod;
-        }
-      } else {
-        if (alert === 1) {
-          initRoll = "2d8kh";
-          initValue = this.system.scores.dex.mod + this.system.initiative.mod;
-        } else {
-          initValue = this.system.scores.dex.mod + this.system.initiative.mod + alertBonus;
-        }
-      }
-    } else {
-      initValue = this.system.initiative.mod;
+      initValue += this.system.scores.dex.mod;
     }
 
-    this.system.initiative.value = initValue;
+    const isGroupInit = game.settings.get("wwn", "initiative") === "group";
+    if (!isGroupInit) {
+      const alert = this.items.find((i) => i.name === "Alert")?.system.ownedLevel || 0;
+      if (alert >= 1) initRoll = "2d8kh";
+
+      const hasVigilant = this.items.some(i => i.name === "Vigilant");
+      if (alert === 2 || hasVigilant) {
+        initValue += 100;
+      }
+    }
+
     this.system.initiative.roll = initRoll;
+    this.system.initiative.value = initValue;
   }
 
   setXP() {

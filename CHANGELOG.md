@@ -1,5 +1,22 @@
 # Changelog
 
+## New in 1.5.1
+
+### Changes
+
+- Extended Godbound damage logic to work with spells, arts, and abilities.
+
+### Fixes
+
+- Various initiative fixes.
+- Various broken compendium links.
+  - Thanks to pandaniel for the above two fixes.
+- Added missing weapon items for weapon arts and linked them in art descriptions.
+  - Thanks to Dreaming Dark for these items, as well as new artwork for Atlas class arts.
+  - There is also art in `wwn/assets/default` for the Verderer, though their arts/spells aren't actually included in any compendiums.
+- Armor and weapons were getting added to containers correctly but not actually displaying, causing them to appear lost.
+- Removed errant 'damage' entry on arts.
+
 ## New in 1.5.0
 
 ### Note: Updated for v13. No attempt was made to maintain compatibility with v12.
