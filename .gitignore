@@ -4,3 +4,11 @@ wwn.zip
 .vscode
 foundry
 .cursor
+
+.DS_Store
+packs/*/LOG
+packs/*/LOG.old
+packs/*/CURRENT
+packs/*/LOCK
+packs/*/*.log
+packs/.DS_Store
