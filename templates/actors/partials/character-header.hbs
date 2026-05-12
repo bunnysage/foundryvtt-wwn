@@ -51,7 +51,7 @@
       <label class="text-[10px] text-wwn-text-muted text-center uppercase tracking-wide" title="{{localize 'WWN.CritResist'}}">{{localize 'WWN.CR'}}</label>
       <input type="number" name="system.critResistance" value="{{system.critResistance}}" data-dtype="Number" placeholder="0" class="w-[2.5em] min-w-[2em] text-center text-sm" />
     </div>
-    {{!-- Strain or Wounds --}}
+    {{!-- Wounds (when enabled) and Strain --}}
     {{#if config.replaceStrainWithWounds}}
     <div class="border border-wwn-border bg-wwn-surface px-1.5 py-1 flex flex-col gap-0.5 items-center rounded-sm w-[76px] h-[56px] justify-center">
       <label class="text-[10px] text-wwn-text-muted text-center uppercase tracking-wide" data-tooltip="Injuries and Fatal Wounds">I/W</label>
@@ -61,7 +61,7 @@
         <input type="number" name="system.hp.wounds" value="{{system.hp.wounds}}" data-dtype="Number" placeholder="0" class="w-[2.5em] min-w-[2em] text-center" />
       </div>
     </div>
-    {{else}}
+    {{/if}}
     <div class="border border-wwn-border bg-wwn-surface px-1.5 py-1 flex flex-col gap-0.5 items-center rounded-sm w-[76px] h-[56px] justify-center">
       <label class="text-[10px] text-wwn-text-muted text-center uppercase tracking-wide">{{localize 'WWN.SystemStrainShort'}}</label>
       <div class="flex items-center gap-0.5 text-sm">
@@ -73,7 +73,6 @@
         <div class="progress-fill h-full bg-wwn-progress-fill transition-[width] duration-200" style="width: {{strainPercent}}%;"></div>
       </div>
     </div>
-    {{/if}}
     {{!-- Movement --}}
     <div class="border border-wwn-border bg-wwn-surface px-1.5 py-1 flex flex-col gap-0.5 items-center rounded-sm {{#if config.showMovement}}w-[90px]{{else}}w-[76px]{{/if}} h-[56px] justify-center">
       <label class="text-[10px] text-wwn-text-muted text-center uppercase tracking-wide">{{localize 'WWN.movement.short'}}</label>

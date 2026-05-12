@@ -189,8 +189,8 @@ export const registerSettings = function () {
   });
 
   game.settings.register("wwn", "replaceStrainWithWounds", {
-    name: "Replace Strain with Wounds",
-    hint: "Removes System Strain from the sheet and replaces it with a tracker for Injuries and Wounds from the Death and Dismemberment rules published by Goblin Punch. Additionally, this enables automatic calculation of such injuries, should damage reduce a character's HP below 0.",
+    name: "Enable Wounds System",
+    hint: "Enable Injuries and Wounds tracker alongside System Strain. Adds automatic injury calculation when damage reduces HP below 0, using Death and Dismemberment rules from Goblin Punch.",
     default: false,
     scope: "world",
     type: Boolean,
