@@ -2,3 +2,10 @@
 wwn.lock
 wwn.zip
 .vscode
+foundry
+.cursor
+node_modules
+
+# test coverage and Quench snapshots
+coverage/
+__snapshots__/

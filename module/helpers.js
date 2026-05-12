@@ -28,6 +28,10 @@ export const registerHelpers = async function () {
     return !a && !b;
   });
 
+  Handlebars.registerHelper("contains", function (arr, val) {
+    return Array.isArray(arr) && arr.includes(val);
+  });
+
   Handlebars.registerHelper("mod", function (val) {
     if (val > 0) {
       return `+${val}`;
@@ -89,5 +93,22 @@ export const registerHelpers = async function () {
     if (!obj) return "";
     if (obj.length <= n) return obj;
     return obj.substring(0, n) + "...";
+  });
+
+  Handlebars.registerHelper(
+    'partial',
+    (path) => `systems/wwn/templates/${path}`
+  );
+
+  Handlebars.registerHelper("log", function (obj) {
+    return console.log(obj);
+  });
+
+  Handlebars.registerHelper("hasSuccessfulSaves", function (results) {
+    return results.some(result => result.isSuccess);
+  });
+
+  Handlebars.registerHelper("hasFailedSaves", function (results) {
+    return results.some(result => !result.isSuccess);
   });
 };

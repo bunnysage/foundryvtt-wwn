@@ -1,5 +1,155 @@
 # Changelog
 
+## New in 1.7.0
+
+### New Sheets
+
+- Added ship sheets.
+  - I did a little cleanup but these are largely due to Tirhan. Thanks for the feature!
+  - Only did some cursory testing. All appears to be well, but if you spot any problems, log a Github Issue or give me a shout on Discord.
+- Added vehicle/mount sheet. This only tracks currency and inventory.
+  - By default, vehicles do not track encumbrance. Typing any number into the max encumbrance field will cause encumbrance to begin auto-calculating.
+  - There is no movement field, as how various B/X games handle movement speed based on overencumbering a vehicle can vary greatly.
+
+### Changes
+
+- Improved attack roll speed, particularly when using trauma and Dice So Nice.
+  - For best results, activate "display chat message immediately" option in Dice So Nice settings.
+- Made Times Up a required module. Without this, some of you were likely having the charge attack active effect stuck on some actors.
+  - If this module is abandoned in the future, I will bake the required functionality for disabling the active effect into the system.
+- New setting: disable coin weight. Applies to both characters and vehicles.
+- Added default token settings for various actor types.
+- Edit lock state now persists instead of resetting on character update, making leveling up much less frustrating.
+- Party sheet received a long-overdue overhaul. It looks much nicer and now refreshes automatically instead of requiring a button press.
+
+### Fixes
+
+- Instinct check threshold. Thanks to SpaceHammer16 for pointing this out.
+- Saving throws and skill checks ignoring blind roll rules.
+  - This wasn't working for the stupidest reason imaginable.
+  - It's possible this has broken something I didn't find in my testing. Please let me know if you have any issues applying damage or healing, or any other chat card interactions.
+- The "Deal Silver" button in the party sheet now correctly reflects whether the world is using the gold standard, both for the dialog button label and for the resulting chat card.
+- Attack counter for monsters now increments from 0 instead of decrementing. Displays error if combat is active and counter is at max. This was always intended to be the case but I reversed the logic at some point.
+
+## New in 1.6.1
+
+### Changes
+
+- Added burst fire option to weapons.
+- Added option for weapons to decrement charges when used, to simulate ammo. Charges will be used instead of the ammo item (but see below).
+- Added reload mechanic when above option is set for a weapon, replenishing charges at the expense of named ammo item. Reload button appears when charges are hovered over in the inventory tab.
+
+### Fixes
+
+- Fixed shield logic when using flat armor penalty from AWN.
+
+## New in 1.6.0
+
+### Changes
+
+- Added Trauma system from Cities/Ashes Without Number. This is gated behind a system-level setting.
+  - Note that this does note include the split Ranged/Melee AC from CWN.
+  - If active, trauma is rolled, and compared to the target token's trauma target.
+  - Trauma damage always displays if there is no target, but only if the trauma roll succeeds otherwise.
+  - Separate damage buttons for applying trauma damage.
+  - Monster trauma target is entered directly, while characters are calculated.
+  - New Active Effect target: "system.trauma.bonus" adds to actor's trauma target beyond what armor applies. Example: Hard to Kill Edge.
+  - New Active Effect target: "system.trauma.targetBonus" adds to actor's trauma die roll granted by weapon. Example: Killing Blow Edge.
+  - Trauma ratings were added to weapons and armor in the compendium. In the case of weapons, it is a judgment call based on some loose guidelines, so your interpration may differ from mine. The rating on the blackjack is particularly likely to make someone scoff.
+- Added a setting to use the Ashes Without Number flat skill penalty for heavy armor.
+  - If active, the weight class of armor will not affect Sneak or Exert penalties, nor will it appear on the armor sheet. Instead a Heavy checkbox will dictate whether that armor inflicts a -1 penalty.
+
+### Fixes
+
+- There was an issue where a container could be dragged into itself, thereby rupturing the space-time continuum and eating all of your items. Existing containers should be restored and duct tape has been applied to the space-time continuum to prevent such behavior in the future.
+- Monsters weren't restoring attack counter on next round.
+
+## New in 1.5.1
+
+### Changes
+
+- Extended Godbound damage logic to work with spells, arts, and abilities.
+
+### Fixes
+
+- Various initiative fixes.
+- Various broken compendium links.
+  - Thanks to pandaniel for the above two fixes.
+- Added missing weapon items for weapon arts and linked them in art descriptions.
+  - Thanks to Dreaming Dark for these items, as well as new artwork for Atlas class arts.
+  - There is also art in `wwn/assets/default` for the Verderer, though their arts/spells aren't actually included in any compendiums.
+- Armor and weapons were getting added to containers correctly but not actually displaying, causing them to appear lost.
+- Removed errant 'damage' entry on arts.
+
+## New in 1.5.0
+
+### Note: Updated for v13. No attempt was made to maintain compatibility with v12.
+
+- All testing efforts were done in v13's Dark mode. The sheet was never designed with v13's theming in mind and it turned out to be pretty difficult to attempt to add it this late in the game. Light mode will _probably_ work fine but don't be surprised if there are small visual issues here and there.
+
+### Known Issue
+
+- Rerolling an individual rerolls all combatants.
+- If two groups ends up with the same initiative value, all combatants will display with decimals. This is a janky workaround to prevent groups with identical initiatives from ending up mixed in the tracker. Doing it the "right" way proved more trouble than it was worth.
+- There are a few broken links in amongst the items, though most should be fixed.
+
+### Changes
+
+- Added `bonus` as a target for Active Effects to adjust attribute mods without using Tweaks.
+  - Example: `system.scores.str.bonus`
+- Added container items.
+  - If a container is equipped or stowed, all items inside are considered stowed.
+  - If a container is neither equipped or stowed, all items inside are neither equipped nor stowed.
+  - This should easily allow for things like dropping backpacks to move more quickly, track things stowed at a home base, and so on.
+  - Only ordinary items may be containers, but they may be of treasure or personal type if desired.
+  - There is no logic checking to see if a treasure bag contains only treasure items, so if you throw an item in a treasure bag and your treasure value doesn't go up... that's probably why.
+  - Ordinary items, weapons, and armor may all be placed in bags. Things like foci and spells shouldn't allow that, though I'm not sure how you would even make that happen.
+  - Drag an item to somewhere else on the sheet (even another non-bag item) to remove it from the container.
+- Compendium improvements.
+  - Reorganized compendiums to use folders for better organization.
+    - Combined Arts + Spells + Foci and Abilities into a single Abilities compendium.
+    - Combined Adventuring Gear + Weapons + Armor into a single Gear compendium.
+    - Fixed various errors and inconsistencies. If you spot any I missed, please report them.
+    - Added SRD class content, including Deluxe and Atlas classes. Shoutout to pandaniel and Zi-SH on the Discord for their help doing data entry on this one.
+  - Added icons to most gear items.
+    - A few bits of adventuring gear didn't have anything suitable in Foundry's icon collection.
+    - The shields share a single icon, as do two pieces of mail armor, due to limited selection in said collection.
+    - Apologies to anyone who has their rolltables broken as a result.
+  - Faction sheet improvements.
+    - Changed order of attributes to match book: Cunning, Forces, Wealth.
+    - Changed order of assets to match book: Cunning, Forces, Wealth.
+    - Assets are sorted alphabetically, with bases of influence at the top.
+    - Allow asset location to be edited from the asset tab of faction sheet.
+    - Added descriptions to faction assets in compendium.
+    - Made some style tweaks to asset tab on faction sheet.
+    - Fixed broken localization on button tooltips on the asset tab.
+    - Added missing Magic field.
+    - Fixed stat level ups always trying to level Force instead of desired stat.
+      - Seriously factions, calm down with the violence!
+    - Fixed faction initiative (provided you use individual--full fix incoming).
+    - Fixed faction attacks forcing attacks to be against certain asset types.
+- Fixed an error with monster saves.
+  - This was caused by an ill-advised "optimization" that had ramifications I didn't foresee. To ensure that all monsters in compendiums are fixed, this is a breaking change. Namely, if you had any characters or monsters that used the "Base Save" in Tweaks to modify their saving throws, you will have to redo the change using the "Universal Save Mod", also located in Tweaks.
+- Clicking a saving throw button on a chat card has been vastly improved.
+  - Now opens a dialog asking for a universal modifier and has individual modifier overrides for each selected token.
+  - Rolls all saves at once and outputs a single chat card containing the results.
+- Added support for Godbound damage.
+  - This is activated in system settings.
+  - When on, the damage buttons are changed to only the following:
+    - Apply Damage <-- this is normal damage
+    - Apply Healing
+    - Straight Damage <-- applies the damage straight
+    - Straight Healing
+  - The actual die rolls don't display in the normal Foundry way, so be away of that. You still see the values.
+  - Because the "normal damage" values are passed through a table and your attribute bonus dynamically applied to whichever would be most beneficial, the normal damage and straight damage values won't match exactly. This is to be expected. I'm not sure how to better communicate this to the user.
+- Fixed weapon charges not displaying on inventory tab.
+- Possible fix for an Item Piles interaction.
+- Moved party sheet button so it is no longer hidden by Foundry's search button in the actors tab.
+- Completely reworked initiative, fixing group initiative and a handful of other issues such as reroll and reset. Shoutout to wyrmisis who gave me permission to use their solution from the OSE project!
+- Fixed Alert 1 not providing a group bonus when Alert combatant's initiative is not the highest within the group.
+- Updating the initiative of one member of a group should update the initiative of all members.
+- Initiative rolls are now grouped into a single chat card instead of spamming the chat.
+
 ## New in 1.4.6
 
 - Correction to XP share calculations. I previously misunderstood how this works when I "fixed" it.
@@ -371,7 +521,7 @@ This update contains significant breaking changes. Please backup existing worlds
 ### Known Issues
 
 - As a result of the armor changes, the shields in the compendium have been changed, as have all magical armors. Magical armor will continue to function without issue--though they will not display anything in the magic field, unless you change them--shields, magical or not, will have to be edited or replaced. Sorry for the inconvenience.
-- Rewrote the individual initiative system to clear some bugs and support the Alert focus. This had the side effect of the PCs no longer being able to roll their initiative individually. Or rather, they can but it will simply be overwritten when combat begins. Sorry about that. If there is a great outcry, I will put in a workaround.
+- Rewritten the individual initiative system to clear some bugs and support the Alert focus. This had the side effect of the PCs no longer being able to roll their initiative individually. Or rather, they can but it will simply be overwritten when combat begins. Sorry about that. If there is a great outcry, I will put in a workaround.
 - Group Initiative still doesn't maintain flags based on disposition (Friendly/Neutral/Hostile). I'm still trying to fix this. There are currently two workarounds, though neither is ideal:
   - If you begin combat, it WILL correctly set sides, but AFTER initiative is rolled. You can then reroll initiative and it will sort itself out.
   - If you manually set colored flags for each combatant, it works correctly the first time.

@@ -1,27 +1,30 @@
-import { WwnPartySheet } from "./dialog/party-sheet.js";
+import { openPartySheet } from "./dialog/party-sheet.js";
 
 export const addControl = (object, html) => {
-  let control = `<button class='wwn-party-sheet' type="button" title='${game.i18n.localize('WWN.dialog.partysheet')}'><i class='fas fa-users'></i></button>`;
-  html.find(".fas.fa-search").replaceWith($(control))
-  html.find('.wwn-party-sheet').click(ev => {
-    showPartySheet(object);
-  })
-}
+  const el = html instanceof jQuery ? html[0] : html;
+  if (!el) return;
 
-export const showPartySheet = (object) => {
-  event.preventDefault();
-  new WwnPartySheet(object, {
-    top: window.screen.height / 2 - 180,
-    left: window.screen.width / 2 - 140,
-  }).render(true);
-}
+  const control = document.createElement("button");
+  control.className = "wwn-party-sheet";
+  control.type = "button";
+  control.title = game.i18n.localize("WWN.dialog.partysheet");
+  control.innerHTML = "<i class='fas fa-users'></i>";
+  control.addEventListener("click", () => showPartySheet(object));
 
-export const update = (actor, data) => {
-  if (actor.getFlag('wwn', 'party')) {
-    Object.values(ui.windows).forEach(w => {
-      if (w instanceof WwnPartySheet) {
-        w.render(true);
-      }
-    })
+  const toggleSearch = el.querySelector(".toggle-search-mode");
+  if (toggleSearch) {
+    toggleSearch.before(control);
+  } else {
+    const header = el.querySelector("#actors header");
+    if (header) header.prepend(control);
   }
 }
+
+export const showPartySheet = () => {
+  openPartySheet();
+}
+
+/**
+ * Called when an actor is updated. Party sheet is now dialog-based; no persistent sheet to refresh.
+ */
+export const update = (_actor, _data) => {}

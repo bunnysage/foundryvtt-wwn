@@ -17,6 +17,7 @@ export const registerSettings = function () {
     scope: "world",
     type: String,
     config: true,
+    reload: true,
     choices: {
       individual: "WWN.Setting.InitiativeIndividual",
       group: "WWN.Setting.InitiativeGroup",
@@ -31,8 +32,11 @@ export const registerSettings = function () {
     scope: "world",
     type: String,
     config: true,
+    reload: true,
     choices: {
       keep: "WWN.Setting.InitiativeKeep",
+      reroll: "WWN.Setting.InitiativeReroll",
+      reset: "WWN.Setting.InitiativeReset",
     }
   });
 
@@ -191,7 +195,7 @@ export const registerSettings = function () {
     scope: "world",
     type: Boolean,
     config: true,
-    requiresReload: false
+    requiresReload: true
   });
 
   game.settings.register("wwn", "enableWoundPoints", {
@@ -208,6 +212,16 @@ export const registerSettings = function () {
     name: "Round Weight Up",
     hint: "Round weight up to the nearest whole number, to most closely match WWN rules. If disabled, weight is not rounded.",
     default: true,
+    scope: "world",
+    type: Boolean,
+    config: true,
+    requiresReload: true
+  });
+
+  game.settings.register("wwn", "disableCoinWeight", {
+    name: "Disable Coin Weight",
+    hint: "If enabled, coin/currency does not count toward encumbrance for characters and vehicles.",
+    default: false,
     scope: "world",
     type: Boolean,
     config: true,
@@ -242,7 +256,36 @@ export const registerSettings = function () {
     type: Boolean,
     config: true,
     requiresReload: true
+  });
 
+  game.settings.register("wwn", "godboundDamage", {
+    name: "Godbound Damage",
+    hint: "Use Godbound-style damage calculation for attacks.",
+    default: false,
+    scope: "world",
+    type: Boolean,
+    config: true,
+    requiresReload: false
+  });
+
+  game.settings.register("wwn", "useTrauma", {
+    name: "Use Trauma",
+    hint: "Enable the trauma system for armor and character sheets.",
+    default: false,
+    scope: "world",
+    type: Boolean,
+    config: true,
+    requiresReload: true
+  });
+
+  game.settings.register("wwn", "useFlatArmorPenalty", {
+    name: "Use Flat Armor Penalty",
+    hint: "In Ashes Without Number, heavy armor inflicts a flat Sneak/Exert penalty.",
+    default: false,
+    scope: "world",
+    type: Boolean,
+    config: true,
+    requiresReload: true
   });
 
   game.settings.register("wwn", "systemMigrationVersion", {
@@ -250,5 +293,15 @@ export const registerSettings = function () {
     scope: "world",
     type: String,
     default: ""
+  });
+
+  game.settings.register("wwn", "itemToCargoRatio", {
+    name: "Item to Cargo Ratio",
+    hint: "The number of Encumbrance that can fit into 1 ton of a ship's cargo.",
+    type: String,
+    config: true,
+    scope: "world",
+    default: "10",
+    requiresReload: true
   });
 };
