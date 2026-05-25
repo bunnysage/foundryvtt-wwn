@@ -89,6 +89,8 @@ async function prepareMonsterContext(document) {
       morale: game.settings.get("wwn", "morale"),
       useTrauma: game.settings.get("wwn", "useTrauma"),
       replaceStrainWithWounds: game.settings.get("wwn", "replaceStrainWithWounds"),
+      thresholdInjuries: game.settings.get("wwn", "thresholdInjuries"),
+      showWoundCounters: game.settings.get("wwn", "replaceStrainWithWounds") || game.settings.get("wwn", "thresholdInjuries"),
       enableWoundPoints: game.settings.get("wwn", "enableWoundPoints"),
     },
     isNew: actor.isNew?.(),

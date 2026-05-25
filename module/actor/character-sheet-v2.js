@@ -120,6 +120,8 @@ async function prepareCharacterContext(document) {
       showMovement: game.settings.get("wwn", "showMovement"),
       currencyTypes: game.settings.get("wwn", "currencyTypes"),
       replaceStrainWithWounds: game.settings.get("wwn", "replaceStrainWithWounds"),
+      thresholdInjuries: game.settings.get("wwn", "thresholdInjuries"),
+      showWoundCounters: game.settings.get("wwn", "replaceStrainWithWounds") || game.settings.get("wwn", "thresholdInjuries"),
       enableWoundPoints: game.settings.get("wwn", "enableWoundPoints"),
       xpPerChar: game.settings.get("wwn", "xpPerChar"),
       medRange: game.settings.get("wwn", "medRange"),

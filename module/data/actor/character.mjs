@@ -22,6 +22,7 @@ export const WwnCharacterDataModel =
             character: new fields.BooleanField({ initial: true }),
             warrior: new fields.BooleanField({ initial: false }),
             damageBonus: new fields.NumberField({ initial: 0 }),
+            injuryResistance: new fields.NumberField({ min: 0, integer: true, initial: 0 }),
             treasure: new fields.NumberField({ min: 0, initial: 0 }),
             personalTreasure: new fields.NumberField({ min: 0, initial: 0 }),
             hp: new fields.SchemaField({

@@ -5,6 +5,7 @@
 import { WwnDice } from "../dice.js";
 import { applyChatCardDamage } from "../chat.js";
 import { WwnDialog } from "../dialog/wwn-dialog.js";
+import { THRESHOLD_CONTEXT_FLAG } from "../injury-thresholds.mjs";
 
 let _boundClickHandler = null;
 let _boundToggleHandler = null;
@@ -259,6 +260,8 @@ function handleChatCardClick(event) {
   const action = button.dataset?.action;
 
   if (action === "apply-damage" || action === "apply-shock") {
+    const messageId = message.dataset?.messageId;
+    const messageObj = messageId ? game.messages.get(messageId) : null;
     const targets = getChatCardTargets(card);
     if (!targets.length) {
       ui.notifications.warn("You must have one or more tokens selected to apply damage.");
@@ -292,7 +295,12 @@ function handleChatCardClick(event) {
     }
     if (!Number.isNaN(amount)) {
       const multiplier = parseFloat(button.dataset.damageMultiplier) || 1;
-      applyChatCardDamage(amount, multiplier);
+      applyChatCardDamage(amount, multiplier, {
+        sourceMessageId: messageId,
+        domAction: action,
+        thresholdActionId: button.dataset.thresholdActionId ?? (action === "apply-shock" ? "shock" : null),
+        attackContext: messageObj?.getFlag?.("wwn", THRESHOLD_CONTEXT_FLAG),
+      });
       return;
     }
   }

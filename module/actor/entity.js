@@ -7,6 +7,22 @@ import * as faction from "./types/faction.mjs";
 import * as monster from "./types/monster.mjs";
 import * as ship from "./types/ship.mjs";
 import * as vehicle from "./types/vehicle.mjs";
+import {
+  THRESHOLD_ACTION_FAMILY_NORMAL_DAMAGE,
+  buildThresholdAttemptKey,
+  computeEdge,
+  computeExistingInjuryPressure,
+  computeHealthPressure,
+  computeInjuryTargetNumber,
+  computeTotalPressure,
+  computeWeaponPressure,
+  evaluateInjuryDie,
+  getActorInjuryResistance,
+  getTargetAac,
+  isPositiveNormalAttackDamage,
+  isValidAttackContext,
+  resolveTrustedThresholdAction,
+} from "../injury-thresholds.mjs";
 
 export class WwnActor extends BaseDocumentMixin(Actor) {
   /**
@@ -580,6 +596,7 @@ export class WwnActor extends BaseDocumentMixin(Actor) {
         type: options.type,
         thac0: thac0,
         dmg: dmgParts,
+        baseWeaponDamageFormula: dmgParts[0],
         save: attData.roll.save,
         target: attData.roll.target,
       },
@@ -635,6 +652,7 @@ export class WwnActor extends BaseDocumentMixin(Actor) {
         type: options.type,
         thac0: thac0,
         dmg: dmgParts,
+        baseWeaponDamageFormula: dmgParts[0],
         save: attData.roll.save,
         target: attData.roll.target,
       },
@@ -654,12 +672,15 @@ export class WwnActor extends BaseDocumentMixin(Actor) {
     });
   }
 
-  async applyDamage(amount = 0, multiplier = 1) {
-    amount = Math.floor(parseInt(amount) * multiplier);
+  async applyDamage(amount = 0, multiplier = 1, options = {}) {
+    const rawAmount = parseInt(amount);
+    amount = Math.floor(rawAmount * multiplier);
     const hp = this.system.hp;
     const wp = this.system.wp;
+    const preDamageHp = { value: Number(hp.value ?? 0), max: Number(hp.max ?? 0) };
     const excessDamage =
       hp.value - amount < 0 ? Math.abs(hp.value - amount) : 0;
+    const belowZeroWoundPreempted = game.settings.get("wwn", "replaceStrainWithWounds") && (this.type === "character" || this.type === "monster") && excessDamage > 0;
 
     // Remaining goes to health
     const dh = Math.clamp(hp.value - amount, 0, hp.max);
@@ -667,14 +688,141 @@ export class WwnActor extends BaseDocumentMixin(Actor) {
       "system.hp.value": dh,
     };
 
-    if (game.settings.get("wwn", "replaceStrainWithWounds") && (this.type === "character" || this.type === "monster") && excessDamage > 0) {
+    if (belowZeroWoundPreempted) {
       await character.applyWounds(this, excessDamage);
     } else if (game.settings.get("wwn", "enableWoundPoints") && (this.type === "character" || this.type === "monster") && excessDamage > 0 && wp) {
       updateData["system.wp.value"] = Math.clamp((wp.value ?? 0) - excessDamage, 0, wp.max ?? 0);
     }
 
     // Update the Actor
-    return this.update(updateData);
+    const hpUpdate = await this.update(updateData);
+    const threshold = await this._applyThresholdInjuryAfterDamage({
+      rawAmount,
+      multiplier,
+      preDamageHp,
+      belowZeroWoundPreempted,
+      threshold: options.threshold,
+      targetToken: options.targetToken,
+    });
+    return options.threshold ? { hpUpdate, threshold } : hpUpdate;
+  }
+
+  async _applyThresholdInjuryAfterDamage({
+    rawAmount,
+    multiplier,
+    preDamageHp,
+    belowZeroWoundPreempted,
+    threshold,
+    targetToken,
+  } = {}) {
+    if (!threshold) return null;
+    if (!game.settings.get("wwn", "thresholdInjuries")) return null;
+    if (!(this.type === "character" || this.type === "monster")) {
+      return { skipped: true, reason: "unsupported-actor-type" };
+    }
+
+    const lookedEligible = threshold.thresholdActionId?.startsWith("normalDamage") || threshold.thresholdActionId === "straightDamage";
+    if (!lookedEligible) return null;
+
+    const attackContext = threshold.attackContext;
+    const trustedAction = resolveTrustedThresholdAction({
+      attackContext,
+      actionId: threshold.thresholdActionId,
+      domAction: threshold.domAction,
+      amount: rawAmount,
+      multiplier,
+    });
+    const action = trustedAction.action;
+    const damageContext = {
+      actionFamily: action?.actionFamily,
+      damageKind: action?.damageKind,
+      amount: rawAmount,
+      multiplier,
+    };
+
+    if (!isValidAttackContext(attackContext)) {
+      return { skipped: true, gmOnly: true, reason: "invalid-attack-context" };
+    }
+    if (!action) {
+      return { skipped: true, gmOnly: true, reason: trustedAction.reason };
+    }
+    if (!isPositiveNormalAttackDamage(damageContext)) return null;
+    const sourceActor = game.actors.get(attackContext.sourceActorId);
+    if (!sourceActor?.items?.get?.(attackContext.sourceItemId) && !attackContext.sourceItemSnapshot) {
+      return { skipped: true, gmOnly: true, reason: "invalid-attack-provenance" };
+    }
+    if (belowZeroWoundPreempted) {
+      return { skipped: true, gmOnly: true, reason: "below-zero-wound-preempted" };
+    }
+
+    const canUpdate = this.canUserModify?.(game.user, "update") ?? this.isOwner;
+    if (!canUpdate) {
+      return { skipped: true, gmOnly: true, reason: "actor-update-permission-denied" };
+    }
+
+    const targetUuid = targetToken?.document?.uuid ?? targetToken?.actor?.uuid ?? this.uuid;
+    const attemptKey = buildThresholdAttemptKey({
+      messageUuid: threshold.messageUuid,
+      targetUuid,
+      actionFamily: THRESHOLD_ACTION_FAMILY_NORMAL_DAMAGE,
+    });
+    if (!attemptKey) return { skipped: true, gmOnly: true, reason: "missing-attempt-key" };
+
+    const attempts = foundry.utils.deepClone(this.getFlag("wwn", "thresholdInjuryAttempts") ?? {});
+    if (attempts[attemptKey]) {
+      return { skipped: true, gmOnly: true, reason: "duplicate-threshold-attempt" };
+    }
+    attempts[attemptKey] = {
+      messageUuid: threshold.messageUuid,
+      targetUuid,
+      actionFamily: THRESHOLD_ACTION_FAMILY_NORMAL_DAMAGE,
+      attemptedAt: new Date().toISOString(),
+    };
+    await this.setFlag("wwn", "thresholdInjuryAttempts", attempts);
+
+    const edge = computeEdge({
+      attackTotal: attackContext.attackTotal,
+      targetAac: getTargetAac(this),
+      naturalD20: attackContext.naturalD20,
+    });
+    if (!edge.eligible) {
+      return { skipped: true, gmOnly: true, reason: edge.reason, edge };
+    }
+
+    const injuryResistance = getActorInjuryResistance(this);
+    const targetNumber = computeInjuryTargetNumber({ injuryResistance, edge: edge.edge });
+    const injuryRoll = await new Roll("1d10").evaluate();
+    const triggered = evaluateInjuryDie({ dieResult: injuryRoll.total, targetNumber });
+
+    const baseResult = {
+      skipped: false,
+      triggered,
+      targetName: this.name,
+      injuryRoll: injuryRoll.total,
+      targetNumber,
+      edge,
+      injuryResistance,
+      sourceItemName: attackContext.sourceItemName,
+    };
+
+    if (!triggered) return baseResult;
+
+    const weaponPressure = computeWeaponPressure(attackContext.baseWeaponDamageFormula);
+    const healthPressure = computeHealthPressure({ hpValue: preDamageHp.value, hpMax: preDamageHp.max });
+    const injuryPressure = computeExistingInjuryPressure(this.system.hp?.injuries ?? 0);
+    const totalPressure = computeTotalPressure({ weaponPressure, healthPressure, injuryPressure });
+    const severityRoll = await new Roll(`1d6 + ${totalPressure}`).evaluate();
+    const result = {
+      ...baseResult,
+      weaponPressure,
+      healthPressure,
+      injuryPressure,
+      totalPressure,
+      severityRoll: severityRoll.total,
+      severityFormula: severityRoll.result,
+    };
+    await character.applyThresholdInjury(this, result, attackContext);
+    return result;
   }
 
   async applyWounds(excess) {

@@ -53,42 +53,42 @@
         </button>
         {{/if}}
         {{#if (nt data.item.system.shock.damage null)}}
-        <button data-action="apply-shock" data-damage="{{data.item.system.shockTotal}}" data-damage-multiplier="1">Apply
+        <button data-action="apply-shock" data-threshold-action-id="shock" data-damage="{{data.item.system.shockTotal}}" data-damage-multiplier="1">Apply
           Shock</button>
         {{/if}}
 
         {{#if straightDamage}}
         <!-- GODBOUND DAMAGE BUTTONS -->
         <div class="flex flex-row gap-1">
-          <button data-action="apply-damage" data-damage="{{rollDamage}}" data-damage-multiplier="1"
+          <button data-action="apply-damage" data-threshold-action-id="normalDamage" data-damage="{{rollDamage}}" data-damage-multiplier="1"
             class="flex-1">Apply Damage</button>
-          <button data-action="apply-damage" data-damage="{{straightDamage}}" data-damage-multiplier="1"
+          <button data-action="apply-damage" data-threshold-action-id="straightDamage" data-damage="{{straightDamage}}" data-damage-multiplier="1"
             class="flex-1">Straight Damage</button>
         </div>
         <div class="flex flex-row gap-1">
-          <button data-action="apply-damage" data-damage="{{rollDamage}}" data-damage-multiplier="-1"
+          <button data-action="apply-damage" data-threshold-action-id="healing" data-damage="{{rollDamage}}" data-damage-multiplier="-1"
             class="flex-1">Apply Healing</button>
-          <button data-action="apply-damage" data-damage="{{straightDamage}}" data-damage-multiplier="-1"
+          <button data-action="apply-damage" data-threshold-action-id="healing" data-damage="{{straightDamage}}" data-damage-multiplier="-1"
             class="flex-1">Straight Healing</button>
         </div>
         {{else}}
         <!-- NORMAL DAMAGE BUTTONS -->
         <div class="flex flex-row gap-1">
-          <button data-action="apply-damage" data-damage="{{rollDamage}}" data-damage-multiplier="1"
+          <button data-action="apply-damage" data-threshold-action-id="normalDamage" data-damage="{{rollDamage}}" data-damage-multiplier="1"
             class="flex-[2]">Apply
             Damage</button>
-          <button data-action="apply-damage" data-damage="{{rollDamage}}" data-damage-multiplier="0.5"
+          <button data-action="apply-damage" data-threshold-action-id="normalDamageHalf" data-damage="{{rollDamage}}" data-damage-multiplier="0.5"
             class="flex-1">1/2</button>
-          <button data-action="apply-damage" data-damage="{{rollDamage}}" data-damage-multiplier="2" class="flex-1">x2</button>
+          <button data-action="apply-damage" data-threshold-action-id="normalDamageDouble" data-damage="{{rollDamage}}" data-damage-multiplier="2" class="flex-1">x2</button>
         </div>
 
         <div class="flex flex-row gap-1">
-          <button data-action="apply-damage" data-damage="{{rollDamage}}" data-damage-multiplier="-1"
+          <button data-action="apply-damage" data-threshold-action-id="healing" data-damage="{{rollDamage}}" data-damage-multiplier="-1"
             class="flex-[2]">Apply
             Healing</button>
-          <button data-action="apply-damage" data-damage="{{rollDamage}}" data-damage-multiplier="-0.5"
+          <button data-action="apply-damage" data-threshold-action-id="healingHalf" data-damage="{{rollDamage}}" data-damage-multiplier="-0.5"
             class="flex-1">1/2</button>
-          <button data-action="apply-damage" data-damage="{{rollDamage}}" data-damage-multiplier="-2" class="flex-1">x2</button>
+          <button data-action="apply-damage" data-threshold-action-id="healingDouble" data-damage="{{rollDamage}}" data-damage-multiplier="-2" class="flex-1">x2</button>
         </div>
         {{/if}}
       </div>
@@ -126,11 +126,11 @@
 
       <!-- TRAUMA DAMAGE BUTTONS -->
       <div class="flex flex-row gap-1 card-buttons mt-1.5">
-        <button data-action="apply-damage" data-damage="{{traumaResult.damage}}" data-damage-multiplier="1"
+        <button data-action="apply-damage" data-threshold-action-id="trauma" data-damage="{{traumaResult.damage}}" data-damage-multiplier="1"
           class="flex-[2]">Apply Damage</button>
-        <button data-action="apply-damage" data-damage="{{traumaResult.damage}}" data-damage-multiplier="0.5"
+        <button data-action="apply-damage" data-threshold-action-id="traumaHalf" data-damage="{{traumaResult.damage}}" data-damage-multiplier="0.5"
           class="flex-1">1/2</button>
-        <button data-action="apply-damage" data-damage="{{traumaResult.damage}}" data-damage-multiplier="2" class="flex-1">x2</button>
+        <button data-action="apply-damage" data-threshold-action-id="traumaDouble" data-damage="{{traumaResult.damage}}" data-damage-multiplier="2" class="flex-1">x2</button>
       </div>
       {{/if}}
       {{/if}}

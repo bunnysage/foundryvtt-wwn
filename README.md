@@ -40,6 +40,8 @@ Everything you need to play Worlds Without Number in Foundry VTT.
 - **Sheets**: Actor and item sheets live under `module/actor/` and `module/item/`. The vehicle sheet has a DocumentSheetV2 (PARTS) variant in `module/actor/vehicle-sheet-v2.js` when Foundry’s AppV2 API is available; it uses Handlebars (`.hbs`) templates.
 - **Dialogs**: System dialogs use `module/dialog/wwn-dialog.js` (WwnDialog.confirm / WwnDialog.wait) with DialogV2 where available; legacy Dialog fallback when not.
 - **Data models**: Placeholder and example for TypeDataModel migration are in `module/data/`; see `module/data/README.md`.
+- **Threshold injury playtest loop**: This 1.7.0 source checkout is the canonical implementation directory. Edit source here, run `npm test`, run `npm run build:css` when templates or styles need a packaged CSS refresh, then symlink or copy this checkout into Foundry's `Data/systems/wwn` directory for runtime QA. Do not edit an installed Foundry package as source.
+- **Threshold injury GM setup**: The `thresholdInjuries` world setting is disabled by default. When enabled, eligible normal attack damage rolls `1d10 >= 8 + injuryResistance - edge`; Edge comes from attack margin against current AAC, with a natural 20 counting as Edge 3. `injuryResistance` is manually assigned on character and monster sheets; use 0 for unprotected/light, 1 for medium/modest natural armor, 2 for heavy/strong natural armor, and 3 for rare exceptional protection. Weapon damage profile affects severity only, not trigger chance.
 
 ## License
 
