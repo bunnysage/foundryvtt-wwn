@@ -5,6 +5,16 @@ wwn.zip
 foundry
 .cursor
 
-.DS_Store
-packs/*
+# dependencies
+node_modules
 node_modules/*
+
+# test coverage and Quench snapshots
+coverage/
+__snapshots__/
+
+# OS
+.DS_Store
+
+# pack working files (LevelDB databases regenerate locally)
+packs/*

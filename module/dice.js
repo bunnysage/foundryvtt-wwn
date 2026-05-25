@@ -1,3 +1,5 @@
+import { WwnDialog } from "./dialog/wwn-dialog.js";
+
 export class WwnDice {
   static async digestResult(data, roll) {
     let result = {
@@ -7,68 +9,57 @@ export class WwnDice {
       total: roll.total,
     };
     let die = roll.terms[0].total;
-    if (data.roll.type == "above") {
-      // SAVING THROWS
-      if (roll.total >= result.target) {
-        result.isSuccess = true;
-      } else {
-        result.isFailure = true;
-      }
-    } else if (data.roll.type == "below") {
-      // MORALE, EXPLORATION
-      if (roll.total <= result.target) {
-        result.isSuccess = true;
-      } else {
-        result.isFailure = true;
-      }
-    } else if (data.roll.type == "check") {
-      // SCORE CHECKS (1s and 20s)
-      if (die == 1 || (roll.total <= result.target && die < 20)) {
-        result.isSuccess = true;
-      } else {
-        result.isFailure = true;
-      }
-    } else if (data.roll.type == "skill") {
-    } else if (data.roll.type == "table") {
-      // Reaction
-      let table = data.roll.table;
-      let output = "";
-      for (let i = 0; i <= roll.total; i++) {
-        if (table[i]) {
-          output = table[i];
-        }
-      }
-      result.details = output;
-    } else if (data.roll.type == "instinct") {
-      // SAVING THROWS
-      if (roll.total >= result.target) {
-        result.isSuccess = true;
-      } else {
-        result.isFailure = true;
-        // Pull result from linked instinct table
-        const iL = data.actor.system.details.instinctTable.table;
-        // RegEx expression to chop up iL into the chunks needed
-        const pattern = /\[(.+)\.([\w]+)\]/;
-        const iA = iL.match(pattern);
-        const type = iA[1];
-        const id = iA[2];
-        let tablePromise;
 
-        if (type === "RollTable") {
-          tablePromise = Promise.resolve(game.tables.get(id))
-        } else if (type === "wwn.instinct") {
-          const pack = game.packs.get('wwn.instinct');
-          tablePromise = pack.getDocument(id);
-        } else {
-          tablePromise = Promise.reject("not an instinct table")
+    switch (data.roll.type) {
+      case "above":
+        roll.total >= result.target ? result.isSuccess = true : result.isFailure = true;
+        break;
+      case "below":
+        roll.total <= result.target ? result.isSuccess = true : result.isFailure = true;
+        break;
+      case "check":
+        die == 1 || (roll.total <= result.target && die < 20) ? result.isSuccess = true : result.isFailure = true;
+        break;
+      case "skill":
+        break;
+      case "table":
+        let table = data.roll.table;
+        let output = "";
+        for (let i = 0; i <= roll.total; i++) {
+          if (table[i]) {
+            output = table[i];
+          }
         }
-        if (game.settings.get("wwn", "hideInstinct")) {
-          tablePromise.then(table => table.draw({ rollMode: "gmroll" }));
-        } else {
-          tablePromise.then(table => table.draw());
+        result.details = output;
+        break;
+      case "instinct":
+        result.isSuccess = roll.total > result.target;
+        result.isFailure = roll.total <= result.target;
+        if (result.isFailure) {
+          const iL = data.actor.system.details.instinctTable.table;
+          const pattern = /\[(.+)\.([\w]+)\]/;
+          const iA = iL.match(pattern);
+          const type = iA[1];
+          const id = iA[2];
+          let tablePromise;
+
+          if (type === "RollTable") {
+            tablePromise = Promise.resolve(game.tables.get(id))
+          } else if (type === "wwn.instinct") {
+            const pack = game.packs.get('wwn.instinct');
+            tablePromise = pack.getDocument(id);
+          } else {
+            tablePromise = Promise.reject("not an instinct table")
+          }
+          if (game.settings.get("wwn", "hideInstinct")) {
+            tablePromise.then(table => table.draw({ rollMode: "gmroll" }));
+          } else {
+            tablePromise.then(table => table.draw());
+          }
         }
-      }
+        break;
     }
+
     return result;
   }
 
@@ -81,7 +72,7 @@ export class WwnDice {
     form = null,
     rollTitle = null
   } = {}) {
-    const template = "systems/wwn/templates/chat/roll-result.html";
+    const template = "systems/wwn/templates/chat/roll-result.hbs";
 
     let chatData = {
       user: game.user.id,
@@ -105,6 +96,9 @@ export class WwnDice {
     // Convert the roll to a chat message and return the roll
     let rollMode = game.settings.get("core", "rollMode");
     rollMode = form ? form.rollMode.value : rollMode;
+
+    // Ensure data.roll exists (skill rolls pass roll: {} initially)
+    if (!data.roll) data.roll = {};
 
     // Force blind roll (art formulas)
     if (data.roll.blindroll) {
@@ -194,6 +188,9 @@ export class WwnDice {
             templateData.rollDamage = godboundRoll.straightTotal;
             renderTemplate(template, templateData).then((content) => {
               chatData.content = content;
+              // So Foundry treats this as a roll message and applies blindable content visibility
+              chatData.type = CONST.CHAT_MESSAGE_TYPES?.ROLL ?? CONST.CHAT_MESSAGE_STYLES?.OTHER;
+              chatData.rolls = [roll];
               // Dice So Nice
               if (game.dice3d) {
                 game.dice3d
@@ -218,6 +215,9 @@ export class WwnDice {
         } else {
           renderTemplate(template, templateData).then((content) => {
             chatData.content = content;
+            // So Foundry treats this as a roll message and applies blindable content visibility
+            chatData.type = CONST.CHAT_MESSAGE_TYPES?.ROLL ?? CONST.CHAT_MESSAGE_STYLES?.OTHER;
+            chatData.rolls = [roll];
             // Dice So Nice
             if (game.dice3d) {
               game.dice3d
@@ -273,12 +273,57 @@ export class WwnDice {
     return result;
   }
 
+  static checkCharges(attData) {
+    const isNPC = attData.actor.type !== "character";
+
+    // Check weapon charges if decrementOnAttack is true
+    if (attData.item.system.charges && attData.item.system.charges.decrementOnAttack) {
+      let requiredCharges = 1;
+      if (attData.form && attData.form.burst && attData.form.burst.checked) {
+        requiredCharges = 3;
+      }
+
+      if (attData.item.system.charges.value < requiredCharges) {
+        const burstText = requiredCharges > 1 ? " (burst fire)" : "";
+        throw new Error(`Not enough charges remaining. Need ${requiredCharges} charge${requiredCharges > 1 ? 's' : ''}${burstText}, but only ${attData.item.system.charges.value} available.`);
+      }
+    }
+
+    // Check ammo if not using weapon charges
+    const ammo = attData.item.system.ammo;
+    if (ammo && !attData.item.system.charges?.decrementOnAttack) {
+      const ammoItem = attData.actor.items.find(item => item.name.toLowerCase().includes(ammo.toLowerCase()) && item.system.charges.value != null);
+      if (!ammoItem || ammoItem.system.charges.value === 0) {
+        throw new Error(`No ${ammo} remaining.`);
+      }
+    }
+  }
+
   static spendAmmo(attData) {
     const isNPC = attData.actor.type !== "character";
+
+    // Handle ammo consumption (only if not using weapon charges)
     const ammo = attData.item.system.ammo;
-    if (isNPC || !ammo) return;
-    const ammoItem = attData.actor.items.find(item => item.name.toLowerCase().includes(ammo.toLowerCase()) && item.system.charges.value != null);
-    ammoItem.update({ "system.charges.value": ammoItem.system.charges.value - 1 });
+    if (ammo && !attData.item.system.charges?.decrementOnAttack) {
+      const ammoItem = attData.actor.items.find(item => item.name.toLowerCase().includes(ammo.toLowerCase()) && item.system.charges.value != null);
+      if (ammoItem) {
+        ammoItem.update({ "system.charges.value": ammoItem.system.charges.value - 1 });
+      }
+    }
+
+    // Handle weapon charge consumption when decrementOnAttack is true
+    if (attData.item.system.charges && attData.item.system.charges.decrementOnAttack && attData.item.system.charges.value > 0) {
+      // Check if burst fire is being used in the attack dialog
+      let chargeDecrement = 1;
+      if (attData.form && attData.form.burst && attData.form.burst.checked) {
+        chargeDecrement = 3;
+      }
+
+      // Decrement weapon charges
+      attData.item.update({
+        "system.charges.value": Math.max(0, attData.item.system.charges.value - chargeDecrement)
+      });
+    }
   }
 
   static async rollGodboundDamage(data) {
@@ -353,15 +398,15 @@ export class WwnDice {
     rollTitle = null,
     dmgTitle = null
   } = {}) {
-    const template = "systems/wwn/templates/chat/roll-attack.html";
+    const template = "systems/wwn/templates/chat/roll-attack.hbs";
 
     let chatData = {
       user: game.user.id,
       speaker: speaker,
     };
 
-    // Include charge bonus
-    if (form !== null && form.charge.checked) {
+    // Include charge bonus if not a ship and charge is checked
+    if (game.actors.get(speaker.actor).type !== "ship" && form !== null && form.charge.checked) {
       parts.push("2");
       rollTitle += " +2 (charge)";
 
@@ -373,7 +418,7 @@ export class WwnDice {
 
       effectTarget.createEmbeddedDocuments("ActiveEffect", [
         {
-          name: "Charge",
+          name: "Charge Attack",
           icon: "icons/environment/people/charge.webp",
           origin: `Actor.${speaker.actor}`,
           "duration.rounds": 1,
@@ -393,8 +438,32 @@ export class WwnDice {
       ])
     }
 
+    // Include burst bonus
+    if (form !== null && form.burst && form.burst.checked) {
+      parts.push("2");
+      rollTitle += " +2 (burst)";
+
+      // Add burst bonus to damage roll
+      if (data.roll && data.roll.dmg) {
+        data.roll.dmg.push("2");
+      }
+
+      // Update damage title to show burst bonus
+      if (dmgTitle) {
+        dmgTitle += " +2 (burst)";
+      }
+    }
+
     // Optionally include a situational bonus
     if (form !== null && form.bonus.value) parts.push(form.bonus.value);
+
+    // Check if we have enough charges/ammo before proceeding
+    try {
+      WwnDice.checkCharges({ ...data, form: form });
+    } catch (error) {
+      ui.notifications.error(error.message);
+      return;
+    }
 
     let templateData = {
       title: title,
@@ -402,7 +471,8 @@ export class WwnDice {
       data: data,
       config: CONFIG.WWN,
       rollTitle: rollTitle,
-      dmgTitle: dmgTitle
+      dmgTitle: dmgTitle,
+      traumaResult: null
     };
 
     const roll = await new Roll(parts.join("+"), data).roll();
@@ -463,6 +533,37 @@ export class WwnDice {
       dmgRoll = await new Roll(data.roll.dmg.join("+"), data).roll();
     }
 
+    // Handle trauma roll if trauma system is enabled and weapon has trauma data
+    let traumaRoll = null;
+    let traumaResult = null;
+    let traumaTarget = null;
+
+    if (game.settings.get("wwn", "useTrauma") &&
+      data.item &&
+      data.item.system.trauma &&
+      data.item.system.trauma.die &&
+      data.item.system.trauma.rating) {
+
+      // Get target actor if specified
+      if (data.roll.target) {
+        traumaTarget = data.roll.target.actor.system.trauma.value;
+      }
+      // Roll trauma die
+      const traumaDie = data.actor.system.trauma.targetBonus ?
+        data.item.system.trauma.die + " + " + data.actor.system.trauma.targetBonus : data.item.system.trauma.die;
+      traumaRoll = await new Roll(traumaDie, data).roll();
+
+      // Calculate trauma damage
+      const traumaDamage = Math.floor(dmgRoll.total * data.item.system.trauma.rating);
+
+      traumaResult = {
+        roll: traumaRoll,
+        damage: traumaDamage,
+        target: traumaTarget,
+        isTraumatic: traumaTarget ? traumaRoll.total >= traumaTarget : true
+      };
+    }
+
     // Convert the roll to a chat message and return the roll
     let rollMode = game.settings.get("core", "rollMode");
     rollMode = form ? form.rollMode.value : rollMode;
@@ -481,6 +582,17 @@ export class WwnDice {
     }
 
     templateData.result = WwnDice.digestAttackResult(data, roll);
+    templateData.traumaResult = traumaResult;
+
+    // Render trauma roll if it exists
+    if (traumaResult && traumaResult.roll) {
+      templateData.traumaRollWWN = await traumaResult.roll.render();
+    }
+
+    // Ensure trauma damage is a number for the template
+    if (traumaResult && traumaResult.damage !== undefined) {
+      templateData.traumaResult.damage = Number(traumaResult.damage);
+    }
 
     return new Promise((resolve) => {
       roll.render().then((r) => {
@@ -500,33 +612,32 @@ export class WwnDice {
                     true,
                     chatData.whisper,
                     chatData.blind
-                  )
-                  .then(() => {
-                    if (templateData.result.isSuccess) {
-                      templateData.result.dmg = dmgRoll.total;
-                      game.dice3d
-                        .showForRoll(
-                          dmgRoll,
-                          game.user,
-                          true,
-                          chatData.whisper,
-                          chatData.blind
-                        )
-                        .then(() => {
-                          ChatMessage.create(chatData);
-                          resolve(roll);
-                        });
-                    } else {
+                  );
+                if (templateData.result.isSuccess) {
+                  templateData.result.dmg = dmgRoll.total;
+                  game.dice3d
+                    .showForRoll(
+                      dmgRoll,
+                      game.user,
+                      true,
+                      chatData.whisper,
+                      chatData.blind
+                    )
+                    .then(() => {
                       ChatMessage.create(chatData);
                       resolve(roll);
-                    }
-                  });
+                    });
+                } else {
+                  ChatMessage.create(chatData);
+                  resolve(roll);
+                }
+
               } else {
                 chatData.sound = CONFIG.sounds.dice;
                 ChatMessage.create(chatData);
                 resolve(roll);
               }
-              this.spendAmmo(data);
+              this.spendAmmo({ ...data, form: form });
             });
           });
         } else {
@@ -543,33 +654,32 @@ export class WwnDice {
                     true,
                     chatData.whisper,
                     chatData.blind
-                  )
-                  .then(() => {
-                    if (templateData.result.isSuccess) {
-                      templateData.result.dmg = dmgRoll.total;
-                      game.dice3d
-                        .showForRoll(
-                          dmgRoll,
-                          game.user,
-                          true,
-                          chatData.whisper,
-                          chatData.blind
-                        )
-                        .then(() => {
-                          ChatMessage.create(chatData);
-                          resolve(roll);
-                        });
-                    } else {
+                  );
+                if (templateData.result.isSuccess) {
+                  templateData.result.dmg = dmgRoll.total;
+                  game.dice3d
+                    .showForRoll(
+                      dmgRoll,
+                      game.user,
+                      true,
+                      chatData.whisper,
+                      chatData.blind
+                    )
+                    .then(() => {
                       ChatMessage.create(chatData);
                       resolve(roll);
-                    }
-                  });
+                    });
+                } else {
+                  ChatMessage.create(chatData);
+                  resolve(roll);
+                }
+
               } else {
                 chatData.sound = CONFIG.sounds.dice;
                 ChatMessage.create(chatData);
                 resolve(roll);
               }
-              this.spendAmmo(data);
+              this.spendAmmo({ ...data, form: form });
             });
           });
         }
@@ -585,8 +695,7 @@ export class WwnDice {
     flavor = null,
     title = null,
   } = {}) {
-    let rolled = false;
-    const template = "systems/wwn/templates/chat/roll-dialog.html";
+    const template = "systems/wwn/templates/chat/roll-dialog.hbs";
     let dialogData = {
       formula: parts.join(" "),
       data: data,
@@ -601,40 +710,32 @@ export class WwnDice {
       flavor: flavor,
       speaker: speaker,
     };
-    if (skipDialog) { return WwnDice.sendRoll(rollData); }
-
-    let buttons = {
-      ok: {
-        label: game.i18n.localize("WWN.Roll"),
-        icon: '<i class="fas fa-dice-d20"></i>',
-        callback: (html) => {
-          rolled = true;
-          rollData.form = html[0].querySelector("form");
-          roll = WwnDice.sendRoll(rollData);
-        },
-      },
-      cancel: {
-        icon: '<i class="fas fa-times"></i>',
-        label: game.i18n.localize("WWN.Cancel"),
-        callback: (html) => { },
-      },
-    };
+    if (skipDialog) return WwnDice.sendRoll(rollData);
 
     const html = await renderTemplate(template, dialogData);
-    let roll;
 
-    //Create Dialog window
-    return new Promise((resolve) => {
-      new Dialog({
-        title: title,
-        content: html,
-        buttons: buttons,
-        default: "ok",
-        close: () => {
-          resolve(rolled ? roll : false);
+    const result = await WwnDialog.wait({
+      title: title,
+      content: html,
+      buttons: [
+        {
+          action: "ok",
+          label: game.i18n.localize("WWN.Roll"),
+          icon: "fa-solid fa-dice-d20",
+          default: true,
+          callback: async (_ev, _btn, dialog) => {
+            rollData.form = dialog.element?.querySelector?.("form");
+            return WwnDice.sendRoll(rollData);
+          },
         },
-      }).render(true);
+        {
+          action: "cancel",
+          icon: "fa-solid fa-times",
+          label: game.i18n.localize("WWN.Cancel"),
+        },
+      ],
     });
+    return result ?? false;
   }
 
   static async Roll({
@@ -647,8 +748,7 @@ export class WwnDice {
     rollTitle = null,
     dmgTitle = null,
   } = {}) {
-    let rolled = false;
-    const template = "systems/wwn/templates/chat/roll-dialog.html";
+    const template = "systems/wwn/templates/chat/roll-dialog.hbs";
     let dialogData = {
       formula: parts.join(" "),
       data: data,
@@ -671,39 +771,31 @@ export class WwnDice {
         : WwnDice.sendRoll(rollData);
     }
 
-    let buttons = {
-      ok: {
-        label: game.i18n.localize("WWN.Roll"),
-        icon: '<i class="fas fa-dice-d20"></i>',
-        callback: (html) => {
-          rolled = true;
-          rollData.form = html[0].querySelector("form");
-          roll = ["melee", "missile", "attack"].includes(data.roll.type)
-            ? WwnDice.sendAttackRoll(rollData)
-            : WwnDice.sendRoll(rollData);
-        },
-      },
-      cancel: {
-        icon: '<i class="fas fa-times"></i>',
-        label: game.i18n.localize("WWN.Cancel"),
-        callback: (html) => { },
-      },
-    };
-
     const html = await renderTemplate(template, dialogData);
-    let roll;
 
-    //Create Dialog window
-    return new Promise((resolve) => {
-      new Dialog({
-        title: title,
-        content: html,
-        buttons: buttons,
-        default: "ok",
-        close: () => {
-          resolve(rolled ? roll : false);
+    const result = await WwnDialog.wait({
+      title: title,
+      content: html,
+      buttons: [
+        {
+          action: "ok",
+          label: game.i18n.localize("WWN.Roll"),
+          icon: "fa-solid fa-dice-d20",
+          default: true,
+          callback: async (_ev, _btn, dialog) => {
+            rollData.form = dialog.element?.querySelector?.("form");
+            return ["melee", "missile", "attack"].includes(data.roll.type)
+              ? WwnDice.sendAttackRoll(rollData)
+              : WwnDice.sendRoll(rollData);
+          },
         },
-      }).render(true);
+        {
+          action: "cancel",
+          icon: "fa-solid fa-times",
+          label: game.i18n.localize("WWN.Cancel"),
+        },
+      ],
     });
+    return result ?? false;
   }
 }

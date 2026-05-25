@@ -2,7 +2,7 @@
   "id": "wwn",
   "title": "Worlds Without Number",
   "description": "Play Worlds Without Number on Foundry VTT",
-  "version": "1.5.1",
+  "version": "1.7.0",
   "compatibility": {
     "minimum": "13",
     "verified": "13",
@@ -17,11 +17,21 @@
     }
   ],
   "esmodules": [
-    "wwn.js"
+    "wwn.js",
+    "tests/quench/register.js"
   ],
   "styles": [
-    "styles/main.css"
+    { "src": "styles/main.css", "layer": "system" }
   ],
+  "relationships": {
+    "requires": [
+      {
+        "id": "times-up",
+        "type": "module",
+        "manifest": "https://gitlab.com/tposney/times-up/raw/master/package/module.json"
+      }
+    ]
+  },
   "packs": [
     {
       "name": "instinct",
@@ -164,5 +174,5 @@
   },
   "url": "https://github.com/SobranDM/foundryvtt-wwn",
   "manifest": "https://github.com/SobranDM/foundryvtt-wwn/releases/latest/download/system.json",
-  "download": "https://github.com/SobranDM/foundryvtt-wwn/releases/download/v1.5.1/wwn.zip"
+  "download": "https://github.com/SobranDM/foundryvtt-wwn/releases/download/v1.7.0/wwn.zip"
 }

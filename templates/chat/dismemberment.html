@@ -1,0 +1,46 @@
+<div class="wwn chat dismemberment">
+  <h3>{{actor}} suffers a grievous wound!</h3>
+  
+  <div class="details">
+    <p><strong>Location:</strong> 
+      {{#if specificLocation}}
+        {{specificLocation.side}} {{specificLocation.type}}
+      {{else}}
+        {{location}}
+      {{/if}}
+    </p>
+    <p><strong>Severity:</strong> {{severity}}</p>
+    <p><strong>Effect:</strong> {{effect}}</p>
+    
+    {{#if durations}}
+      <p class="duration">
+        {{#if durations.days}}
+          Duration: {{durations.days}} days
+        {{else if durations.weeks}}
+          Duration: {{durations.weeks}} weeks
+        {{else if durations.variable}}
+          Duration: {{durations.variable}} {{#if effect.includes("rnd")}}rounds{{else if effect.includes("min")}}minutes{{/if}}
+        {{/if}}
+      </p>
+    {{/if}}
+    
+    {{#if saveResults}}
+      <div class="saves">
+        {{#if saveResults.ruined}}
+          <p>Save successful: Limb disabled for {{durations.weeks}} weeks</p>
+        {{else if saveResults.ruined === false}}
+          <p>Save failed: Limb permanently disabled</p>
+        {{/if}}
+        
+        {{#if saveResults.permanent}}
+          <p>Save successful: You gain a cool scar</p>
+        {{else if saveResults.permanent === false}}
+          <p>Save failed: Permanent injury sustained</p>
+          {{#if saveResults.coma}}
+            <p>Additional effect: Coma (Save to recover after 1d6 days and 1d6 weeks)</p>
+          {{/if}}
+        {{/if}}
+      </div>
+    {{/if}}
+  </div>
+</div> 

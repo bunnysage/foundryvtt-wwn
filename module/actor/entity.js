@@ -1,80 +1,61 @@
 import { WwnDice } from "../dice.js";
 import { WwnItem } from "../item/entity.js";
+import BaseDocumentMixin from "../documents/base-document-mixin.mjs";
+import * as character from "./types/character.mjs";
+import * as creature from "./types/creature.mjs";
+import * as faction from "./types/faction.mjs";
+import * as monster from "./types/monster.mjs";
+import * as ship from "./types/ship.mjs";
+import * as vehicle from "./types/vehicle.mjs";
 
-export class WwnActor extends Actor {
+export class WwnActor extends BaseDocumentMixin(Actor) {
   /**
-   * Extends data from base Actor class
+   * Extends data from base Actor class. Dispatches to type-specific prepare modules.
    */
-
   prepareData() {
     super.prepareData();
-
-    if (this.type === "faction") {
-      const data = this.system;
-      const assets = (
-        this.items.filter((i) => i.type == "asset")
-      );
-      const cunningAssets = assets.filter(
-        (i) => i.system["assetType"] === "cunning"
-      );
-      const forceAssets = assets.filter(
-        (i) => i.system["assetType"] === "force"
-      );
-      const wealthAssets = assets.filter(
-        (i) => i.system["assetType"] === "wealth"
-      );
-
-      function sortAssets(a, b) {
-        if (a.system.baseOfInfluence && !b.system.baseOfInfluence) return -1;
-        if (!a.system.baseOfInfluence && b.system.baseOfInfluence) return 1;
-        return a.name > b.name ? 1 : -1;
-      }
-
-      data.cunningAssets = cunningAssets.sort(sortAssets);
-      data.forceAssets = forceAssets.sort(sortAssets);
-      data.wealthAssets = wealthAssets.sort(sortAssets);
-
-      data.health.max =
-        this.getHealth(data.wealthRating) +
-        this.getHealth(data.forceRating) +
-        this.getHealth(data.cunningRating);
-    } else {
-      // Compute modifiers from actor scores
-      this.computeModifiers();
-      this.computeAC();
-      this.computeEncumbrance();
-      this._calculateMovement();
-      this.computeResources();
-      this.computeTreasure();
-      this.computePersonalTreasure();
-      this.enableSpellcasting();
-      this.computeEffort();
-      if (this.system.spells.leveledSlots) this.computeSlots();
-      this.computeSaves();
-      this.computeTotalSP();
-      this.setXP();
-      this.computePrepared();
-      this.computeInit();
-    }
+    if (this.type === "faction") faction.prepare(this);
+    else if (this.type === "vehicle") vehicle.prepare(this);
+    else if (this.type === "ship") ship.prepare(this);
+    else if (this.type === "monster") monster.prepare(this);
+    else if (this.type === "character") character.prepare(this);
   }
 
+  /** @inheritdoc */
   async createEmbeddedDocuments(embeddedName, data = [], context = {}) {
     if (!game.user.isGM && !this.isOwner) return;
-    data.map((item) => {
-      if (item.img === undefined) {
-        item.img = WwnItem.defaultIcons[item.type];
-      }
-    });
     return super.createEmbeddedDocuments(embeddedName, data, context);
   }
 
-  async _onCreate() {
+  /** @inheritdoc */
+  async _preCreate(data, options, user) {
+    const allowed = await super._preCreate(data, options, user);
+    if (allowed === false) return false;
+
+    const updates = {};
+    // Token defaults for all actor types: name on hover for everyone, bar1 = HP on hover for owner
+    const dm = CONST.TOKEN_DISPLAY_MODES;
+    updates["prototypeToken.displayName"] = dm.HOVER ?? 3;
+    updates["prototypeToken.displayBars"] = dm.OWNER_HOVER ?? 2;
+    updates["prototypeToken.bar1"] = { attribute: "hp" };
     if (this.type === "faction") {
-      await this.update({
-        "token.actorLink": true,
-        "img": "systems/wwn/assets/default/faction.png"
-      });
+      updates["prototypeToken.actorLink"] = true;
+      updates.img = "systems/wwn/assets/default/faction.png";
     }
+    if (this.type === "character") {
+      updates["prototypeToken.actorLink"] = true;
+      updates["prototypeToken.sight.enabled"] = true;
+    }
+    if (this.type === "ship") {
+      updates["prototypeToken.actorLink"] = true;
+      updates.img = "icons/skills/trades/profession-sailing-ship.webp";
+    }
+    if (this.type === "vehicle") {
+      updates["prototypeToken.actorLink"] = true;
+      updates.img = "icons/environment/creatures/horse-tan.webp";
+    }
+
+    this.updateSource(updates);
   }
 
   /* -------------------------------------------- */
@@ -126,10 +107,14 @@ export class WwnActor extends Actor {
       "system.currency.bank": value + this.system.currency.bank,
     }).then(() => {
       const speaker = ChatMessage.getSpeaker({ actor: this });
+      const currency = game.settings.get("wwn", "useGoldStandard")
+        ? game.i18n.localize("WWN.currency.gold")
+        : game.i18n.localize("WWN.currency.silver");
       ChatMessage.create({
         content: game.i18n.format("WWN.messages.GetCurrency", {
           name: this.name,
           value,
+          currency,
         }),
         speaker,
       });
@@ -455,13 +440,21 @@ export class WwnActor extends Actor {
     if (game.user.targets.size > 0) {
       for (let t of game.user.targets.values()) {
         data.roll.target = t;
-        await this.rollAttack(data, {
-          type: type,
-          skipDialog: options.skipDialog,
-        });
+        if (this.type !== "ship") {
+          await this.rollAttack(data, {
+            type: type,
+            skipDialog: options.skipDialog,
+          });
+        } else {
+          this.rollShipAttack(data, { type: type, skipDialog: options.skipDialog });
+        }
       }
     } else {
-      this.rollAttack(data, { type: type, skipDialog: options.skipDialog });
+      if (this.type !== "ship") {
+        this.rollAttack(data, { type: type, skipDialog: options.skipDialog });
+      } else {
+        this.rollShipAttack(data, { type: type, skipDialog: options.skipDialog });
+      }
     }
   }
 
@@ -486,11 +479,6 @@ export class WwnActor extends Actor {
     }
 
     const isNPC = attData.actor.type !== "character";
-    const ammo = attData.item.system.ammo;
-    const ammoItem = ammo ? attData.actor.items.find(item => item.name.toLowerCase().includes(ammo.toLowerCase()) && item.system.charges.value != null) : undefined;
-    if (!isNPC && ammo && (ammoItem === undefined || ammoItem.system.charges.value === 0)) {
-      return ui.notifications.error(`No ${ammo} remaining.`);
-    }
 
     let readyState = "";
     let label = game.i18n.format("WWN.roll.attacks", {
@@ -611,176 +599,86 @@ export class WwnActor extends Actor {
     });
   }
 
+  async rollShipAttack(attData, options = {}) {
+    const data = this.system;
+    const rollParts = ["1d20"];
+    const dmgParts = [];
+    const rollLabels = [];
+    const dmgLabels = [];
+
+    let label = game.i18n.format("WWN.roll.attacks", {
+      name: this.name,
+    });
+    if (!attData.item) {
+      dmgParts.push("1d6");
+    } else {
+      dmgParts.push(attData.item.system.damage);
+    }
+
+    rollParts.push(data.thac0.bba.toString());
+    rollLabels.push(`+${data.thac0.bba} (attack bonus)`);
+
+    if (attData.item && attData.item.system.bonus) {
+      rollParts.push(attData.item.system.bonus);
+      rollLabels.push(`+${attData.item.system.bonus} (weapon bonus)`);
+    }
+    let thac0 = data.thac0.value;
+
+    const rollTitle = `1d20 ${rollLabels.join(" ")}`;
+    const dmgTitle = `${dmgParts[0]} ${dmgLabels.join(" ")}`;
+
+    const rollData = {
+      ...(this._getRollData() || {}),
+      actor: this,
+      item: attData.item,
+      roll: {
+        type: options.type,
+        thac0: thac0,
+        dmg: dmgParts,
+        save: attData.roll.save,
+        target: attData.roll.target,
+      },
+    };
+
+    // Roll and return
+    return await WwnDice.Roll({
+      event: options.event,
+      parts: rollParts,
+      data: rollData,
+      skipDialog: options.skipDialog,
+      speaker: ChatMessage.getSpeaker({ actor: this }),
+      flavor: label,
+      title: label,
+      rollTitle: rollTitle,
+      dmgTitle: dmgTitle,
+    });
+  }
+
   async applyDamage(amount = 0, multiplier = 1) {
     amount = Math.floor(parseInt(amount) * multiplier);
     const hp = this.system.hp;
+    const wp = this.system.wp;
     const excessDamage =
       hp.value - amount < 0 ? Math.abs(hp.value - amount) : 0;
 
     // Remaining goes to health
     const dh = Math.clamp(hp.value - amount, 0, hp.max);
+    const updateData = {
+      "system.hp.value": dh,
+    };
 
     if (game.settings.get("wwn", "replaceStrainWithWounds") && (this.type === "character" || this.type === "monster") && excessDamage > 0) {
-      this.applyWounds(excessDamage);
+      await character.applyWounds(this, excessDamage);
+    } else if (game.settings.get("wwn", "enableWoundPoints") && (this.type === "character" || this.type === "monster") && excessDamage > 0 && wp) {
+      updateData["system.wp.value"] = Math.clamp((wp.value ?? 0) - excessDamage, 0, wp.max ?? 0);
     }
 
     // Update the Actor
-    return this.update({
-      "system.hp.value": dh,
-    });
+    return this.update(updateData);
   }
 
   async applyWounds(excess) {
-    const locations = {
-      1: [
-        "Left Arm",
-        "Disabled",
-        "Your arm becomes unusable. It cannot hold things and any held item is dropped.",
-        "<b>Mangled.</b> Make a Physical save. On a failure, a limb is permanently disabled or hacked off. On a success, you merely lose a finger or toe.",
-      ],
-      2: [
-        "Right Arm",
-        "Disabled",
-        "Your arm becomes unusable. It cannot hold things and any held item is dropped.",
-        "<b>Mangled.</b> Make a Physical save. On a failure, a limb is permanently disabled or hacked off. On a success, you merely lose a finger or toe.",
-      ],
-      3: [
-        "Left Leg",
-        "Disabled",
-        "Your leg becomes unusable. It cannot support your weight and you fall prone. Movement cut in half.",
-        "<b>Mangled.</b> Make a Physical save. On a failure, a limb is permanently disabled or hacked off. On a success, you merely lose a finger or toe.",
-      ],
-      4: [
-        "Right Leg",
-        "Disabled",
-        "Your leg becomes unusable. It cannot support your weight and you fall prone. Movement cut in half.",
-        "<b>Mangled.</b> Make a Physical save. On a failure, a limb is permanently disabled or hacked off. On a success, you merely lose a finger or toe.",
-      ],
-      5: [
-        "Torso",
-        "Blood Loss",
-        "Your maximum HP is reduced by 1 per HD you possess.",
-        "<b>Crushed.</b> Make a Physical save. On a success, you gain a cool scar. On a failure, roll [[/r 1d6]]:<br />1) Permanently lose 1 Strength.<br />2) Permanently lose 1 Dexterity.<br />3) Permanently lose 1 Constitution.<br />4) Crushed throat. You cannot speak louder than a whisper.<br />5) Crushed ribs. Treat Constitution as 4 when holding your breath.<br />6) Your spine is broken and you are paralyzed from the neck down. You can attempt recovery twice: by making a Con Check after [[1d6]] days and again after [[1d6]] weeks. If you fail both, it is permanent.",
-      ],
-      6: [
-        "Torso",
-        "Blood Loss",
-        "Your maximum HP is reduced by 1 per HD you possess.",
-        "<b>Crushed.</b> Make a Physical save. On a success, you gain a cool scar. On a failure, roll [[/r 1d6]]:<br />1) Permanently lose 1 Strength.<br />2) Permanently lose 1 Dexterity.<br />3) Permanently lose 1 Constitution.<br />4) Crushed throat. You cannot speak louder than a whisper.<br />5) Crushed ribs. Treat Constitution as 4 when holding your breath.<br />6) Your spine is broken and you are paralyzed from the neck down. You can attempt recovery twice: by making a Con Check after [[1d6]] days and again after [[1d6]] weeks. If you fail both, it is permanent.",
-      ],
-      7: [
-        "Torso",
-        "Blood Loss",
-        "Your maximum HP is reduced by 1 per HD you possess.",
-        "<b>Crushed.</b> Make a Physical save. On a success, you gain a cool scar. On a failure, roll [[/r 1d6]]:<br />1) Permanently lose 1 Strength.<br />2) Permanently lose 1 Dexterity.<br />3) Permanently lose 1 Constitution.<br />4) Crushed throat. You cannot speak louder than a whisper.<br />5) Crushed ribs. Treat Constitution as 4 when holding your breath.<br />6) Your spine is broken and you are paralyzed from the neck down. You can attempt recovery twice: by making a Con Check after [[1d6]] days and again after [[1d6]] weeks. If you fail both, it is permanent.",
-      ],
-      8: [
-        "Torso",
-        "Blood Loss",
-        "Your maximum HP is reduced by 1 per HD you possess.",
-        "<b>Crushed.</b> Make a Physical save. On a success, you gain a cool scar. On a failure, roll [[/r 1d6]]:<br />1) Permanently lose 1 Strength.<br />2) Permanently lose 1 Dexterity.<br />3) Permanently lose 1 Constitution.<br />4) Crushed throat. You cannot speak louder than a whisper.<br />5) Crushed ribs. Treat Constitution as 4 when holding your breath.<br />6) Your spine is broken and you are paralyzed from the neck down. You can attempt recovery twice: by making a Con Check after [[1d6]] days and again after [[1d6]] weeks. If you fail both, it is permanent.",
-      ],
-      9: [
-        "Head",
-        "Concussed",
-        "Always act last in combat. Make an Int check (DC 12) when you cast a spell to avoid it fizzling.",
-        "<b>Skullcracked.</b> Make a Physical save. On a success, you gain a cool scar. On a failure, roll [[/r 1d6]]:<br />1) Permanently lose 1 Intelligence.<br />2) Permanently lose 1 Wisdom.<br />3) Permanently lose 1 Charisma.<br />4) Lose your left eye. -1 to Ranged Attacks.<br />5) Lose your right eye. -1 to Ranged Attacks.<br />6) Slip into a coma. You can attempt recovery twice: by making a Con Check after [[1d6]] days and again after [[1d6]] weeks. If you fail both, it is permanent.",
-      ],
-      10: [
-        "Head",
-        "Concussed",
-        "Always act last in combat. Make an Int check (DC 12) when you cast a spell to avoid it fizzling.",
-        "<b>Skullcracked.</b> Make a Physical save. On a success, you gain a cool scar. On a failure, roll [[/r 1d6]]:<br />1) Permanently lose 1 Intelligence.<br />2) Permanently lose 1 Wisdom.<br />3) Permanently lose 1 Charisma.<br />4) Lose your left eye. -1 to Ranged Attacks.<br />5) Lose your right eye. -1 to Ranged Attacks.<br />6) Slip into a coma. You can attempt recovery twice: by making a Con Check after [[1d6]] days and again after [[1d6]] weeks. If you fail both, it is permanent.",
-      ],
-      11: [
-        "Head",
-        "Concussed",
-        "Always act last in combat. Make an Int check (DC 12) when you cast a spell to avoid it fizzling.",
-        "<b>Skullcracked.</b> Make a Physical save. On a success, you gain a cool scar. On a failure, roll [[/r 1d6]]:<br />1) Permanently lose 1 Intelligence.<br />2) Permanently lose 1 Wisdom.<br />3) Permanently lose 1 Charisma.<br />4) Lose your left eye. -1 to Ranged Attacks.<br />5) Lose your right eye. -1 to Ranged Attacks.<br />6) Slip into a coma. You can attempt recovery twice: by making a Con Check after [[1d6]] days and again after [[1d6]] weeks. If you fail both, it is permanent.",
-      ],
-      12: [
-        "Head",
-        "Concussed",
-        "Always act last in combat. Make an Int check (DC 12) when you cast a spell to avoid it fizzling.",
-        "<b>Skullcracked.</b> Make a Physical save. On a success, you gain a cool scar. On a failure, roll [[/r 1d6]]:<br />1) Permanently lose 1 Intelligence.<br />2) Permanently lose 1 Wisdom.<br />3) Permanently lose 1 Charisma.<br />4) Lose your left eye. -1 to Ranged Attacks.<br />5) Lose your right eye. -1 to Ranged Attacks.<br />6) Slip into a coma. You can attempt recovery twice: by making a Con Check after [[1d6]] days and again after [[1d6]] weeks. If you fail both, it is permanent.",
-      ],
-    };
-
-    const locationRoll = await new Roll("1d12").evaluate();
-    const hitLocation = locations[locationRoll.total];
-    const currInjuries = this.system.hp.injuries || 0;
-    const currWounds = this.system.hp.wounds || 0;
-    const woundRoll = await new Roll(
-      `1d12 + ${currInjuries} + ${excess}`
-    ).evaluate();
-    const woundMessage = woundRoll.result;
-    const woundResult = woundRoll.total;
-    const template = "systems/wwn/templates/chat/apply-damage.html";
-    let newInjuries = 0;
-    let newWounds = 0;
-
-    let content = `<p><b>Location: ${hitLocation[0]}.</b></p><p><b>Severity: ${woundResult}</b> (${woundMessage})</p><p><b>${hitLocation[1]} for ${woundResult} days.</b> ${hitLocation[2]}*</p>`;
-
-    if (woundResult >= 16) {
-      newWounds += woundResult - 15;
-    }
-    if (woundResult >= 11) {
-      content += `<p>${hitLocation[3]}*</p><p><b>You are unconscious.</b></p>`;
-      newInjuries++;
-      newWounds++;
-    }
-    newInjuries++;
-
-    content +=
-      "<p><b>* Fire/Acid/Lightning/Arcane:</b> Consult rules for alternate injuries.</p>";
-
-    await this.update({
-      "system.hp": {
-        wounds: currWounds + newWounds,
-        injuries: currInjuries + newInjuries,
-      },
-    });
-
-    content += `
-      <table>
-        <thead>
-          <tr>
-            <td />
-            <td><b>Prev</b></td>
-            <td><b>New</b></td>
-            <td><b>Total</b></td>
-          </tr>
-        </thead>
-        <tbody>
-          <tr>
-            <td><b>Injuries</b></td>
-            <td>${currInjuries}</td>
-            <td>${newInjuries}</td>
-            <td>${this.system.hp.injuries}</td>
-          </tr>
-          <tr>
-            <td><b>Wounds</b></td>
-            <td>${currWounds}</td>
-            <td>${newWounds}</td>
-            <td>${this.system.hp.wounds}</td>
-          </tr>
-        </tbody>
-      </table>`;
-
-    const templateData = {
-      title: `${this.name}: ${hitLocation[0]} Wounded!`,
-      body: content,
-      image: "icons/svg/blood.svg"
-    };
-
-    const html = await renderTemplate(template, templateData);
-
-    const chatData = {
-      user: game.user_id,
-      content: html,
-    };
-
-    ChatMessage.create(chatData, {});
+    if (this.type === "character" || this.type === "monster") await character.applyWounds(this, excess);
   }
 
   static _valueFromTable(table, val) {
@@ -794,514 +692,88 @@ export class WwnActor extends Actor {
   }
 
   computeInit() {
-    let initRoll = "1d8";
-    let initValue = this.system.initiative.mod;
-    if (this.type == "character") {
-      initValue += this.system.scores.dex.mod;
-    }
-
-    const isGroupInit = game.settings.get("wwn", "initiative") === "group";
-    if (!isGroupInit) {
-      const alert = this.items.find((i) => i.name === "Alert")?.system.ownedLevel || 0;
-      if (alert >= 1) initRoll = "2d8kh";
-
-      const hasVigilant = this.items.some(i => i.name === "Vigilant");
-      if (alert === 2 || hasVigilant) {
-        initValue += 100;
-      }
-    }
-
-    this.system.initiative.roll = initRoll;
-    this.system.initiative.value = initValue;
+    creature.computeInit(this);
   }
 
   setXP() {
-    if (this.type != "character") {
-      return;
-    }
-    const data = this.system;
-    let xpRate = [];
-    let level = data.details.level - 1;
-
-    // Retrieve XP Settings
-    switch (game.settings.get("wwn", "xpConfig")) {
-      case "xpSlow":
-        xpRate = [6, 15, 24, 36, 51, 69, 87, 105, 139];
-        break;
-      case "xpFast":
-        xpRate = [3, 6, 12, 18, 27, 39, 54, 72, 93];
-        break;
-      case "xpCustom":
-        xpRate = game.settings.get("wwn", "xpCustomList").split(",");
-        break;
-    }
-
-    // Set character's XP to level
-    if (!game.settings.get("wwn", "xpPerChar")) {
-      this.system.details.xp.next = xpRate[level];
-    }
+    character.setXP(this);
   }
 
   computePrepared() {
-    const spells = this.items.filter((i) => i.type == "spell");
-    if (spells.length === 0) return;
-
-    // Initialize data and variables
-    let spellsPrepared = 0;
-
-    spells.forEach((s) => {
-      if (s.system.prepared) {
-        spellsPrepared++;
-      }
-    });
-    this.system.spells.prepared.value = spellsPrepared;
+    character.computePrepared(this);
   }
 
   computeEncumbrance() {
-    if (this.type != "character") return;
-    const data = this.system;
+    character.computeEncumbrance(this);
+  }
 
-    // Compute encumbrance
-    let totalReadied = 0;
-    let totalStowed = 0;
-    let maxReadied = Math.floor(data.scores.str.value / 2);
-    let maxStowed = data.scores.str.value;
-    const weapons = this.items.filter((w) => w.type == "weapon");
-    const armors = this.items.filter((a) => a.type == "armor");
-    const items = this.items.filter((i) => i.type == "item");
+  computeEncumbranceVehicle() {
+    vehicle.computeEncumbranceVehicle(this);
+  }
 
-    weapons.forEach((w) => {
-      if ((w.system.weightless === "whenReadied" && w.system.equipped) ||
-        (w.system.weightless === "whenStowed" && w.system.stowed)) {
-        return;
-      }
+  computeEncumbranceShip() {
+    ship.computeEncumbranceShip(this);
+  }
 
-      if (game.settings.get("wwn", "roundWeight")) {
-        if (w.system.equipped) {
-          totalReadied += Math.ceil(w.system.weight * w.system.quantity);
-        } else if (w.system.stowed) {
-          totalStowed += Math.ceil(w.system.weight * w.system.quantity);
-        }
-      } else {
-        if (w.system.equipped) {
-          totalReadied += (w.system.weight * w.system.quantity);
-        } else if (w.system.stowed) {
-          totalStowed += (w.system.weight * w.system.quantity);
-        }
-      }
-    });
-    armors.forEach((a) => {
-      if (
-        (a.system.weightless === "whenReadied" && a.system.equipped) ||
-        (a.system.weightless === "whenStowed" && a.system.stowed)
-      )
-        return;
-      if (a.system.equipped) {
-        totalReadied += a.system.weight;
-      } else if (a.system.stowed) {
-        totalStowed += a.system.weight;
-      }
-    });
-    items.forEach((i) => {
-      if (
-        (i.system.weightless === "whenReadied" && i.system.equipped) ||
-        (i.system.weightless === "whenStowed" && i.system.stowed)
-      )
-        return;
-      let itemWeight;
-      if (i.system.charges.value || i.system.charges.max) {
-        if (
-          i.system.charges.value <= i.system.charges.max ||
-          !i.system.charges.value
-        ) {
-          itemWeight = i.system.weight;
-        } else if (!i.system.charges.max) {
-          itemWeight = i.system.charges.value * i.system.weight;
-        } else {
-          itemWeight = i.system.charges.value / i.system.charges.max * i.system.weight;
-        }
-      } else {
-        itemWeight = i.system.weight * i.system.quantity;
-      }
-      if (!game.settings.get("wwn", "roundWeight")) {
-        if (i.system.equipped) {
-          totalReadied += itemWeight;
-        } else if (i.system.stowed) {
-          totalStowed += itemWeight;
-        }
-      } else {
-        if (i.system.equipped) {
-          totalReadied += Math.ceil(itemWeight);
-        } else if (i.system.stowed) {
-          totalStowed += Math.ceil(itemWeight);
-        }
-      }
+  computeCrewStrength() {
+    ship.computeCrewStrength(this);
+  }
 
-    });
-
-    if (game.settings.get("wwn", "currencyTypes") == "currencybx") {
-      const coinWeight =
-        (data.currency.cp +
-          data.currency.sp +
-          data.currency.ep +
-          data.currency.gp +
-          data.currency.pp) /
-        100;
-      totalStowed += coinWeight;
-    } else {
-      const coinWeight =
-        (data.currency.cp + data.currency.sp + data.currency.gp) / 100;
-      totalStowed += coinWeight;
-    }
-
-    this.system.encumbrance = {
-      readied: { max: maxReadied, value: totalReadied.toFixed(2) },
-      stowed: { max: maxStowed, value: totalStowed.toFixed(2) },
-    };
+  computeCrewCost() {
+    ship.computeCrewCost(this);
   }
 
   _calculateMovement() {
-    if (this.type != "character") return;
-
-    const data = this.system;
-
-    if (data.config.movementAuto) {
-      let newBase = data.movement.base;
-      const readiedValue = data.encumbrance.readied.value;
-      const readiedMax = data.encumbrance.readied.max;
-      const stowedValue = data.encumbrance.stowed.value;
-      const stowedMax = data.encumbrance.stowed.max;
-      const bonus = data.movement.bonus;
-
-      let systemBase = [];
-      game.settings.get("wwn", "movementRate") == "movebx"
-        ? (systemBase = [40, 30, 20])
-        : (systemBase = [30, 20, 15]);
-
-      if (readiedValue <= readiedMax && stowedValue <= stowedMax) {
-        newBase = systemBase[0] + bonus;
-      } else if (readiedValue <= readiedMax + 2 && stowedValue <= stowedMax) {
-        newBase = systemBase[1] + bonus;
-      } else if (readiedValue <= readiedMax && stowedValue <= stowedMax + 4) {
-        newBase = systemBase[1] + bonus;
-      } else if (
-        readiedValue <= readiedMax + 2 &&
-        stowedValue <= stowedMax + 4
-      ) {
-        newBase = systemBase[2] + bonus;
-      } else if (readiedValue <= readiedMax + 4 && stowedValue <= stowedMax) {
-        newBase = systemBase[2] + bonus;
-      } else if (readiedValue <= readiedMax && stowedValue <= stowedMax + 8) {
-        newBase = systemBase[2] + bonus;
-      } else {
-        newBase = 0;
-      }
-      this.system.movement = {
-        base: newBase,
-        exploration: newBase * 3,
-        overland: newBase / 5,
-        bonus,
-      };
-    }
+    character._calculateMovement(this);
   }
 
-  // Calculate Resources
   computeResources() {
-    if (this.type != "character") return;
-    let totalOil = 0;
-    let totalTorches = 0;
-    let totalRations = 0;
-
-    // Collect resource arrays
-    const oilArray = this.items.filter(
-      (i) =>
-        i.name.toLowerCase() === "oil, one pint" ||
-        i.name.toLowerCase() === "oil"
-    );
-    const torchArray = this.items.filter(
-      (i) => i.name.toLowerCase() === "torch"
-    );
-    const rationsArray = this.items.filter((i) =>
-      i.name.toLowerCase().includes("rations")
-    );
-
-    // Calculate resource totals
-    oilArray.forEach((i) => (totalOil += i.system.charges.value));
-    torchArray.forEach((i) => (totalTorches += i.system.charges.value));
-    rationsArray.forEach((i) => (totalRations += i.system.charges.value));
-
-    // Update resources
-    this.system.details.resources = {
-      oil: totalOil,
-      torches: totalTorches,
-      rations: totalRations,
-    };
+    character.computeResources(this);
   }
 
-  // Enable spell sheet and relevant sections
   enableSpellcasting() {
-    if (this.type === "faction") return;
-    const arts = this.items.filter(i => i.type === "art");
-    const spells = this.items.filter(i => i.type === "spell");
-    if (arts.length > 0 || spells.length > 0) {
-      this.system.spells.enabled = true;
-    }
-    arts.length > 0
-      ? this.system.spells.artsEnabled = true
-      : this.system.spells.artsEnabled = false;
-    spells.length > 0
-      ? this.system.spells.spellsEnabled = true
-      : this.system.spells.spellsEnabled = false;
+    character.enableSpellcasting(this);
   }
 
-  // Compute Total Wealth
   computeTotalSP() {
-    const data = this.system;
-    if (this.type != "character") return;
-    let newTotal = 0;
-    if (game.settings.get("wwn", "useGoldStandard")) {
-      newTotal =
-        data.currency.cp * 0.01 +
-        data.currency.sp * 0.1 +
-        data.currency.gp * 1 +
-        data.currency.pp * 5 +
-        data.currency.ep * 0.5 +
-        data.currency.bank +
-        data.personalTreasure;
-    } else {
-      newTotal =
-        data.currency.cp * 0.1 +
-        data.currency.sp +
-        data.currency.gp * 10 +
-        data.currency.pp * 50 +
-        data.currency.ep * 5 +
-        data.currency.bank +
-        data.personalTreasure;
-    }
-
-    this.system.currency.total = newTotal;
+    character.computeTotalSP(this);
   }
 
-  // Compute Effort
+  computeTotalCargoValue() {
+    ship.computeTotalCargoValue(this);
+  }
+
   computeEffort() {
-    const arts = this.items.filter((a) => a.type == "art");
-    if (arts.length === 0) {
-      this.system.classes = {}
-      return;
-    };
-
-    // Initialize data
-    const data = this.system;
-
-    const classPools = {}
-
-    arts.forEach((a) => {
-      if (!classPools[a.system.source]) {
-        classPools[a.system.source] = { value: a.system.effort, max: data.classes[a.system.source]?.max || 1 };
-      } else {
-        classPools[a.system.source].value += a.system.effort;
-      }
-    });
-
-    this.system.classes = classPools;
+    character.computeEffort(this);
   }
 
-  // Compute Spell Slots
   async computeSlots() {
-    const spells = this.items.filter((spell) => spell.type === "spell");
-    const slots = this.system.spells.slots;
-    Object.keys(slots).forEach(
-      (level) => (this.system.spells.slots[level].used = 0)
-    );
-    spells.forEach((spell) => {
-      const spellLvl = spell.system.lvl;
-      // const currUsed = this.system.spells.slots[spellLvl].used;
-      slots[spellLvl].used += spell.system.memorized;
-    });
+    await character.computeSlots(this);
   }
 
   computeTreasure() {
-    if (this.type != "character") {
-      return;
-    }
-    const data = this.system;
-    // Compute treasure
-    let total = 0;
-    const treasures = this.items.filter(
-      (i) => i.type == "item" && i.system.treasure && !i.system.personal
-    );
-    treasures.forEach((item) => {
-      total += item.system.quantity * item.system.price;
-    });
-    this.system.treasure = total;
+    character.computeTreasure(this);
   }
 
   computePersonalTreasure() {
-    if (this.type != "character") {
-      return;
-    }
-    const data = this.system;
-    // Compute treasure
-    let total = 0;
-    const treasures = this.items.filter(
-      (i) => i.type == "item" && i.system.personal
-    );
-    treasures.forEach((item) => {
-      total += item.system.quantity * item.system.price;
-    });
-    this.system.personalTreasure = total;
+    character.computePersonalTreasure(this);
   }
 
-
   computeAC() {
-    if (this.type != "character") {
-      return;
-    }
-
-    const data = this.system;
-
-    // Compute AC
-    let baseAac = 10;
-    let AacShieldMod = 0;
-    let AacShieldNaked = 0;
-    let naked = baseAac + data.scores.dex.mod + data.aac.mod;
-    let exertPenalty = 0;
-    let sneakPenalty = 0;
-
-    const armors = this.items.filter((i) => i.type == "armor");
-    armors.forEach((a) => {
-      if (!a.system.equipped) {
-        return;
-      }
-      if (a.system.type != "shield") {
-        baseAac = Number(a.system.aac.value) + a.system.aac.mod;
-        // Check if armor is medium or heavy and apply appropriate Sneak/Exert penalty
-        if (a.system.type === "medium" && a.system.weight > sneakPenalty) {
-          sneakPenalty = a.system.weight;
-        }
-        if (a.system.type === "heavy" && a.system.weight > sneakPenalty) {
-          sneakPenalty = a.system.weight;
-        }
-        if (a.system.type === "heavy" && a.system.weight > exertPenalty) {
-          exertPenalty = a.system.weight;
-        }
-      } else if (a.system.type == "shield") {
-        AacShieldMod = 1 + a.system.aac.mod;
-        AacShieldNaked = Number(a.system.aac.value) + a.system.aac.mod;
-      }
-    });
-    if (AacShieldMod > 0) {
-      let shieldOnly = AacShieldNaked + data.scores.dex.mod + data.aac.mod;
-      let shieldBonus =
-        baseAac + data.scores.dex.mod + data.aac.mod + AacShieldMod;
-      if (shieldOnly > shieldBonus) {
-        this.system.aac = {
-          value: shieldOnly,
-          shield: 0,
-          naked,
-          mod: data.aac.mod,
-        };
-      } else {
-        this.system.aac = {
-          value: shieldBonus,
-          shield: AacShieldMod,
-          naked,
-          mod: data.aac.mod,
-        };
-      }
-    } else {
-      this.system.aac = {
-        value: baseAac + data.scores.dex.mod + data.aac.mod,
-        naked,
-        shield: 0,
-        mod: data.aac.mod,
-      };
-    }
-    this.system.skills.sneakPenalty = sneakPenalty;
-    this.system.skills.exertPenalty = exertPenalty;
+    character.computeAC(this);
   }
 
   computeModifiers() {
-    if (this.type != "character") return;
-
-    const data = this.system;
-    const scores = data.scores;
-
-    const standard = {
-      0: -2,
-      3: -2,
-      4: -1,
-      8: 0,
-      14: 1,
-      18: 2,
-    };
-
-    const bx = {
-      0: -3,
-      4: -2,
-      6: -1,
-      9: 0,
-      13: 1,
-      16: 2,
-      18: 3
-    };
-
-    const table = game.settings.get("wwn", "attributeModType") === "bx" ? bx : standard;
-
-    Object.keys(scores).map((score) => {
-      let newMod =
-        this.system.scores[score].tweak +
-        this.system.scores[score].bonus +
-        WwnActor._valueFromTable(table, scores[score].value);
-      this.system.scores[score].mod = newMod;
-    });
+    creature.computeModifiers(this);
   }
 
   computeSaves() {
-    if (this.type === "faction") return;
-    const data = this.system;
-    const saves = data.saves;
-    const baseSave = this.type === "monster" ? 15 : 16;
-
-    Object.keys(saves).forEach((s) => {
-      if (!saves[s].mod) {
-        saves[s].mod = 0;
-      }
-    });
-
-    if (this.type === "monster") {
-      const monsterHD = data.hp.hd.toLowerCase().split("d");
-      ["evasion", "physical", "mental", "luck"].forEach((save) => {
-        data.saves[save].value = Math.max(baseSave - Math.floor(monsterHD[0] / 2), 2) + data.saves[save].mod + data.saves.baseSave.mod;
-      });
-    }
-    if (this.type === "character") {
-      const charLevel = data.details.level;
-      const newSaves = {
-        evasionVal: baseSave + data.saves.baseSave.mod + data.saves.evasion.mod,
-        physicalVal: baseSave + data.saves.baseSave.mod + data.saves.physical.mod,
-        mentalVal: baseSave + data.saves.baseSave.mod + data.saves.mental.mod,
-        luckVal: baseSave + data.saves.baseSave.mod + data.saves.luck.mod
-      }
-      newSaves.evasionVal -= Math.max(data.scores.int.mod, data.scores.dex.mod);
-      newSaves.physicalVal -= Math.max(data.scores.con.mod, data.scores.str.mod);
-      newSaves.mentalVal -= Math.max(data.scores.wis.mod, data.scores.cha.mod);
-
-      const removeLevelSave = game.settings.get("wwn", "removeLevelSave");
-      Object.keys(newSaves).forEach((save) => {
-        if (!removeLevelSave) newSaves[save] -= charLevel;
-      });
-
-      this.system.saves.evasion.value = newSaves.evasionVal;
-      this.system.saves.physical.value = newSaves.physicalVal;
-      this.system.saves.mental.value = newSaves.mentalVal;
-      this.system.saves.luck.value = newSaves.luckVal;
-    }
+    creature.computeSaves(this);
   }
 
   _getRollData() {
-    if (this.type === "faction") {
-      // for now, no roll data for factions
+    if (this.type === "faction" || this.type === "ship") {
+      // for now, no roll data for factions or ships
       // but something to look at in the future maybe?
       return {};
     }
@@ -1389,7 +861,7 @@ export class WwnActor extends Actor {
       };
     });
 
-    if (type === "character") {
+    if (this.type === "character") {
       await this.createEmbeddedDocuments("Item", skills);
     }
   }

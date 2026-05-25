@@ -1,5 +1,69 @@
 # Changelog
 
+## New in 1.7.0
+
+### New Sheets
+
+- Added ship sheets.
+  - I did a little cleanup but these are largely due to Tirhan. Thanks for the feature!
+  - Only did some cursory testing. All appears to be well, but if you spot any problems, log a Github Issue or give me a shout on Discord.
+- Added vehicle/mount sheet. This only tracks currency and inventory.
+  - By default, vehicles do not track encumbrance. Typing any number into the max encumbrance field will cause encumbrance to begin auto-calculating.
+  - There is no movement field, as how various B/X games handle movement speed based on overencumbering a vehicle can vary greatly.
+
+### Changes
+
+- Improved attack roll speed, particularly when using trauma and Dice So Nice.
+  - For best results, activate "display chat message immediately" option in Dice So Nice settings.
+- Made Times Up a required module. Without this, some of you were likely having the charge attack active effect stuck on some actors.
+  - If this module is abandoned in the future, I will bake the required functionality for disabling the active effect into the system.
+- New setting: disable coin weight. Applies to both characters and vehicles.
+- Added default token settings for various actor types.
+- Edit lock state now persists instead of resetting on character update, making leveling up much less frustrating.
+- Party sheet received a long-overdue overhaul. It looks much nicer and now refreshes automatically instead of requiring a button press.
+
+### Fixes
+
+- Instinct check threshold. Thanks to SpaceHammer16 for pointing this out.
+- Saving throws and skill checks ignoring blind roll rules.
+  - This wasn't working for the stupidest reason imaginable.
+  - It's possible this has broken something I didn't find in my testing. Please let me know if you have any issues applying damage or healing, or any other chat card interactions.
+- The "Deal Silver" button in the party sheet now correctly reflects whether the world is using the gold standard, both for the dialog button label and for the resulting chat card.
+- Attack counter for monsters now increments from 0 instead of decrementing. Displays error if combat is active and counter is at max. This was always intended to be the case but I reversed the logic at some point.
+
+## New in 1.6.1
+
+### Changes
+
+- Added burst fire option to weapons.
+- Added option for weapons to decrement charges when used, to simulate ammo. Charges will be used instead of the ammo item (but see below).
+- Added reload mechanic when above option is set for a weapon, replenishing charges at the expense of named ammo item. Reload button appears when charges are hovered over in the inventory tab.
+
+### Fixes
+
+- Fixed shield logic when using flat armor penalty from AWN.
+
+## New in 1.6.0
+
+### Changes
+
+- Added Trauma system from Cities/Ashes Without Number. This is gated behind a system-level setting.
+  - Note that this does note include the split Ranged/Melee AC from CWN.
+  - If active, trauma is rolled, and compared to the target token's trauma target.
+  - Trauma damage always displays if there is no target, but only if the trauma roll succeeds otherwise.
+  - Separate damage buttons for applying trauma damage.
+  - Monster trauma target is entered directly, while characters are calculated.
+  - New Active Effect target: "system.trauma.bonus" adds to actor's trauma target beyond what armor applies. Example: Hard to Kill Edge.
+  - New Active Effect target: "system.trauma.targetBonus" adds to actor's trauma die roll granted by weapon. Example: Killing Blow Edge.
+  - Trauma ratings were added to weapons and armor in the compendium. In the case of weapons, it is a judgment call based on some loose guidelines, so your interpration may differ from mine. The rating on the blackjack is particularly likely to make someone scoff.
+- Added a setting to use the Ashes Without Number flat skill penalty for heavy armor.
+  - If active, the weight class of armor will not affect Sneak or Exert penalties, nor will it appear on the armor sheet. Instead a Heavy checkbox will dictate whether that armor inflicts a -1 penalty.
+
+### Fixes
+
+- There was an issue where a container could be dragged into itself, thereby rupturing the space-time continuum and eating all of your items. Existing containers should be restored and duct tape has been applied to the space-time continuum to prevent such behavior in the future.
+- Monsters weren't restoring attack counter on next round.
+
 ## New in 1.5.1
 
 ### Changes
