@@ -2,6 +2,7 @@
  * Character-specific actor logic (prepareData and compute methods).
  */
 import * as creature from "./creature.mjs";
+import { computeSeverityBand } from "../../injury-thresholds.mjs";
 
 /**
  * Run full prepareData for character (all compute steps in order).
@@ -354,4 +355,65 @@ export async function applyWounds(actor, excess) {
   const templateData = { title: `${actor.name}: ${hitLocation[0]} Wounded!`, body: content, image: "icons/svg/blood.svg" };
   const html = await renderTemplate(template, templateData);
   await ChatMessage.create({ user: game.user.id, content: html }, {});
+}
+
+/**
+ * Create a threshold injury from the opt-in injury die workflow.
+ * @param {import("../../entity.js").WwnActor} actor
+ * @param {object} thresholdResult
+ * @param {object} attackContext
+ */
+export async function applyThresholdInjury(actor, thresholdResult, attackContext = {}) {
+  const locations = {
+    1: ["Arm", "Bruised grip", "The limb aches and shakes off after a moment."],
+    2: ["Arm", "Cut forearm", "The wound needs attention after the fight."],
+    3: ["Leg", "Staggered step", "Movement is briefly awkward."],
+    4: ["Leg", "Twisted knee", "Running or climbing is painful until treated."],
+    5: ["Torso", "Rattled ribs", "Breathing is painful under exertion."],
+    6: ["Torso", "Deep bruise", "Armor or flesh took a punishing blow."],
+    7: ["Hand", "Numb fingers", "Fine manipulation is unreliable until rested."],
+    8: ["Shoulder", "Wrenched shoulder", "Heavy use of the arm is painful."],
+    9: ["Head", "Dazed", "Focus is difficult for a few moments."],
+    10: ["Head", "Split brow", "Blood and shock make the hit hard to ignore."],
+    11: ["Vitals", "Bad angle", "The injury could worsen without care."],
+    12: ["Vitals", "Dangerous wound", "Treatment is strongly advised."],
+  };
+
+  const locationRoll = await new Roll("1d12").evaluate();
+  const hitLocation = locations[locationRoll.total] ?? ["Body", "Threshold injury", "The hit leaves a mark."];
+  const severity = computeSeverityBand(thresholdResult.severityRoll);
+
+  const currentInjuries = actor.system.hp?.injuries ?? 0;
+  if (severity.persistent) {
+    await actor.update({ "system.hp.injuries": currentInjuries + 1 });
+  }
+
+  const edgeLabel = thresholdResult.edge?.source === "natural20"
+    ? "Natural 20 Edge 3"
+    : thresholdResult.edge?.margin !== null
+      ? `Margin ${thresholdResult.edge.margin}, Edge ${thresholdResult.edge.edge}`
+      : `Edge ${thresholdResult.edge?.edge ?? 0}`;
+  const persistentText = severity.persistent ? "Persistent injury recorded." : "No persistent injury recorded.";
+  const content = `
+    <p><b>Source:</b> ${attackContext.sourceItemName || "Attack"}</p>
+    <p><b>Injury die:</b> ${thresholdResult.injuryRoll} vs ${thresholdResult.targetNumber}+ [IR ${thresholdResult.injuryResistance}; ${edgeLabel}]</p>
+    <p><b>Severity:</b> ${severity.band} (${thresholdResult.severityFormula})</p>
+    <p><b>Location:</b> ${hitLocation[0]}.</p>
+    <p><b>${hitLocation[1]}.</b> ${hitLocation[2]}</p>
+    <p>${persistentText}</p>`;
+
+  const template = "systems/wwn/templates/chat/apply-damage.hbs";
+  const templateData = {
+    title: `${actor.name}: ${severity.band} Threshold Injury`,
+    body: content,
+    image: "icons/svg/blood.svg",
+  };
+  const html = await renderTemplate(template, templateData);
+  const chatData = {
+    user: game.user.id,
+    content: html,
+  };
+  if (attackContext.whisper) chatData.whisper = attackContext.whisper;
+  if (attackContext.blind) chatData.blind = true;
+  await ChatMessage.create(chatData, {});
 }

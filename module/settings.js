@@ -198,6 +198,16 @@ export const registerSettings = function () {
     requiresReload: true
   });
 
+  game.settings.register("wwn", "thresholdInjuries", {
+    name: game.i18n.localize("WWN.Setting.ThresholdInjuries"),
+    hint: game.i18n.localize("WWN.Setting.ThresholdInjuriesHint"),
+    default: false,
+    scope: "world",
+    type: Boolean,
+    config: true,
+    requiresReload: true
+  });
+
   game.settings.register("wwn", "enableWoundPoints", {
     name: "Enable Wound Points",
     hint: "Enable the Wound Points (WP) mechanic from the WWN rulebook. When enabled, excess damage beyond HP will be applied to WP.",

@@ -11,6 +11,17 @@ function mockRoll(total, dieTotal = total) {
 }
 
 describe("module/dice.js", () => {
+  describe("WwnDice.naturalD20", () => {
+    it("reads the natural die result from modern roll dice", () => {
+      const roll = { dice: [{ results: [{ result: 20 }] }], terms: [{ total: 25 }] };
+      expect(WwnDice.naturalD20(roll)).to.equal(20);
+    });
+
+    it("falls back to the first term total for simple mocked rolls", () => {
+      expect(WwnDice.naturalD20(mockRoll(14))).to.equal(14);
+    });
+  });
+
   describe("WwnDice.digestResult", () => {
     describe("type: above", () => {
       it("sets isSuccess when total >= target", async () => {

@@ -37,6 +37,10 @@
       <input type="number" name="system.aac.value" value="{{system.aac.value}}" data-dtype="Number" placeholder="0" title="{{localize 'WWN.ArmorClass'}}" disabled class="w-[2.5em] min-w-[2em] text-center text-sm font-semibold" />
       <div class="text-[9px] text-wwn-text-muted leading-none">{{#if system.aac.shield}}{{localize 'WWN.armor.shield'}}{{else}}{{localize 'WWN.NoShield'}}{{/if}}</div>
     </div>
+    <div class="border border-wwn-border bg-wwn-surface px-1.5 py-1 flex flex-col gap-0.5 items-center rounded-sm w-[76px] h-[56px] justify-center">
+      <label class="text-[10px] text-wwn-text-muted text-center uppercase tracking-wide" title="{{localize 'WWN.InjuryResistanceHint'}}">{{localize 'WWN.InjuryResistanceShort'}}</label>
+      <input type="number" name="system.injuryResistance" value="{{system.injuryResistance}}" data-dtype="Number" min="0" step="1" placeholder="0" title="{{localize 'WWN.InjuryResistanceHint'}}" {{#unless user.isGM}}disabled{{/unless}} class="w-[2.5em] min-w-[2em] text-center text-sm" />
+    </div>
     {{#if config.enableWoundPoints}}
     <div class="border border-wwn-border bg-wwn-surface px-1.5 py-1 flex flex-col gap-0.5 items-center rounded-sm w-[76px] h-[56px] justify-center">
       <label class="text-[10px] text-wwn-text-muted text-center uppercase tracking-wide">WP</label>
@@ -52,7 +56,7 @@
       <input type="number" name="system.critResistance" value="{{system.critResistance}}" data-dtype="Number" placeholder="0" class="w-[2.5em] min-w-[2em] text-center text-sm" />
     </div>
     {{!-- Wounds (when enabled) and Strain --}}
-    {{#if config.replaceStrainWithWounds}}
+    {{#if config.showWoundCounters}}
     <div class="border border-wwn-border bg-wwn-surface px-1.5 py-1 flex flex-col gap-0.5 items-center rounded-sm w-[76px] h-[56px] justify-center">
       <label class="text-[10px] text-wwn-text-muted text-center uppercase tracking-wide" data-tooltip="Injuries and Fatal Wounds">I/W</label>
       <div class="flex items-center gap-0.5 text-sm">

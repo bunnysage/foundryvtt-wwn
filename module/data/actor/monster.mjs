@@ -16,11 +16,14 @@ export const WwnMonsterDataModel =
             ...getSpellcasterSchema(fields),
             character: new fields.BooleanField({ initial: false }),
             damageBonus: new fields.NumberField({ initial: 0 }),
+            injuryResistance: new fields.NumberField({ min: 0, integer: true, initial: 0 }),
             attacks: new fields.StringField({ initial: "" }),
             hp: new fields.SchemaField({
               hd: new fields.StringField({ initial: "1d8" }),
               value: new fields.NumberField({ min: 0, initial: 4 }),
               max: new fields.NumberField({ min: 0, initial: 4 }),
+              injuries: new fields.NumberField({ min: 0, initial: 0 }),
+              wounds: new fields.NumberField({ min: 0, initial: 0 }),
             }),
             details: new fields.SchemaField({
               biography: new fields.StringField({ initial: "" }),
