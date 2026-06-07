@@ -42,6 +42,42 @@
       "flags": { }
     },
     {
+      "name": "armor",
+      "label": "Armor",
+      "system": "wwn",
+      "path": "packs/armor.db",
+      "type": "Item",
+      "private": false,
+      "flags": { }
+    },
+    {
+      "name": "weapons",
+      "label": "Weapons",
+      "system": "wwn",
+      "path": "packs/weapons.db",
+      "type": "Item",
+      "private": false,
+      "flags": { }
+    },
+    {
+      "name": "foci",
+      "label": "Foci and Abilities",
+      "system": "wwn",
+      "path": "packs/foci.db",
+      "type": "Item",
+      "private": false,
+      "flags": { }
+    },
+    {
+      "name": "spells",
+      "label": "Spells",
+      "system": "wwn",
+      "path": "packs/spells.db",
+      "type": "Item",
+      "private": false,
+      "flags": { }
+    },
+    {
       "name": "skills",
       "label": "Skills",
       "system": "wwn",
