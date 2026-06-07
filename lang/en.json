@@ -496,6 +496,7 @@
   "WWN.messages.AttackAscendingSuccess": "<b>Hits AC {result}!</b>",
   "WWN.messages.AttackFailure": "<b>Attack fails</b> ({bonus})",
   "WWN.messages.AttackAscendingFailure": "<b>Attack fails</b>",
+  "WWN.messages.CriticalHit": "Critical Hit!",
   "WWN.messages.InflictsDamage": "Inflicts damage!",
   "WWN.messages.applyDamage": "Apply Damage",
   "WWN.messages.applyShockDamage": "Apply Shock Damage",

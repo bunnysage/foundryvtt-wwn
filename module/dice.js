@@ -598,6 +598,7 @@ export class WwnDice {
 
     templateData.result = WwnDice.digestAttackResult(data, roll);
     templateData.traumaResult = traumaResult;
+    templateData.isNatural20 = WwnDice.naturalD20(roll) === 20;
 
     const buttonDamageAmount = dmgRoll.total;
     const normalDamageFormula = data.roll?.baseWeaponDamageFormula ?? data.roll?.dmg?.join(" + ") ?? "";
