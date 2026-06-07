@@ -30,7 +30,6 @@ export const WwnCharacterDataModel =
               value: new fields.NumberField({ min: 0, initial: 4 }),
               max: new fields.NumberField({ min: 0, initial: 4 }),
               injuries: new fields.NumberField({ min: 0, initial: 0 }),
-              wounds: new fields.NumberField({ min: 0, initial: 0 }),
             }),
             scores: new fields.SchemaField(scores),
             details: new fields.SchemaField({

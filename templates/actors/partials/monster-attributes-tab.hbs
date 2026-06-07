@@ -31,18 +31,27 @@
                 {{/if}}
                 {{#if config.showWoundCounters}}
                 <li>
-                    <h4 class="bg-wwn-header-bg text-wwn-panel-title text-center p-0.5 border border-wwn-border-strong" data-tooltip="Injuries and Fatal Wounds. Hover over each to see their effects.">
-                        I/W
+                    <h4 class="bg-wwn-header-bg text-wwn-panel-title text-center p-0.5 border border-wwn-border-strong" data-tooltip="Injuries. Damage in excess of your HP, along with your current injuries, are added to a die roll to determine the severity of your next injury.">
+                        I
                     </h4>
                     <div class="flex flex-row text-center p-1">
                         <input name="system.hp.injuries" type="number" value="{{system.hp.injuries}}" data-dtype="Number"
                             placeholder="0" data-tooltip="Injuries. Damage in excess of your HP, along with your current injuries, are added to a die roll to determine the severity of your next injury." />
-                        <span class="sep"> / </span>
-                        <input name="system.hp.wounds" type="number" value="{{system.hp.wounds}}" data-dtype="Number"
-                            placeholder="0" data-tooltip="Fatal Wounds. You have 3 rounds in which to remove all of your fatal wounds or perish." />
                     </div>
                 </li>
                 {{/if}}
+                <li>
+                    <h4 class="bg-wwn-header-bg text-wwn-panel-title text-center p-0.5 border border-wwn-border-strong" data-tooltip="Injury Resistance / Crit Resistance.">
+                        IR/CR
+                    </h4>
+                    <div class="flex flex-row text-center p-1">
+                        <input name="system.injuryResistance" type="number" value="{{system.injuryResistance}}" min="0" step="1"
+                            data-dtype="Number" placeholder="0" data-tooltip="{{localize 'WWN.InjuryResistanceHint'}}" {{#unless user.isGM}}disabled{{/unless}} />
+                        <span class="sep"> / </span>
+                        <input name="system.critResistance" type="number" value="{{system.critResistance}}" data-dtype="Number"
+                            placeholder="0" data-tooltip="{{localize 'WWN.CritResist'}}" />
+                    </div>
+                </li>
                 <li class="morale-check">
                     <h4 class="bg-wwn-header-bg text-wwn-panel-title text-center p-0.5 border border-wwn-border-strong"><a>{{ localize "WWN.details.morale" }}</a>
                     </h4>

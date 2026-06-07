@@ -65,6 +65,14 @@
           <button data-action="apply-damage" data-threshold-action-id="straightDamage" data-damage="{{straightDamage}}" data-damage-multiplier="1"
             class="flex-1">Straight Damage</button>
         </div>
+        {{#if isNatural20}}
+        <div class="flex flex-row gap-1">
+          <button data-action="apply-damage" data-threshold-action-id="natural20CriticalDamage" data-damage="{{rollDamage}}" data-damage-multiplier="2"
+            class="flex-1">Critical Damage</button>
+          <button data-action="apply-damage" data-threshold-action-id="straightNatural20CriticalDamage" data-damage="{{straightDamage}}" data-damage-multiplier="2"
+            class="flex-1">Critical Straight</button>
+        </div>
+        {{/if}}
         <div class="flex flex-row gap-1">
           <button data-action="apply-damage" data-threshold-action-id="healing" data-damage="{{rollDamage}}" data-damage-multiplier="-1"
             class="flex-1">Apply Healing</button>
@@ -81,6 +89,12 @@
             class="flex-1">1/2</button>
           <button data-action="apply-damage" data-threshold-action-id="normalDamageDouble" data-damage="{{rollDamage}}" data-damage-multiplier="2" class="flex-1">x2</button>
         </div>
+        {{#if isNatural20}}
+        <div class="flex flex-row gap-1">
+          <button data-action="apply-damage" data-threshold-action-id="natural20CriticalDamage" data-damage="{{rollDamage}}" data-damage-multiplier="2"
+            class="flex-1">Critical Damage</button>
+        </div>
+        {{/if}}
 
         <div class="flex flex-row gap-1">
           <button data-action="apply-damage" data-threshold-action-id="healing" data-damage="{{rollDamage}}" data-damage-multiplier="-1"

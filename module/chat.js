@@ -183,16 +183,26 @@ async function renderThresholdSkippedNote(results = []) {
     "threshold-action-dom-mismatch": "trusted action did not match clicked button type",
     "threshold-action-amount-mismatch": "trusted action did not match clicked damage amount",
     "threshold-action-multiplier-mismatch": "trusted action did not match clicked damage multiplier",
+    "lower-half-threshold-damage-roll": "damage roll was below the threshold injury cutoff",
+    "unsupported-threshold-damage-range": "damage formula range could not be evaluated safely",
+    "no-threshold-trigger": "no threshold injury trigger qualified",
   };
   const counts = skipped.reduce((acc, threshold) => {
     const key = threshold.reason ?? "unknown";
     acc[key] = (acc[key] ?? 0) + 1;
     return acc;
   }, {});
-  const body = `<ul>${Object.entries(counts).map(([reason, count]) => {
+  const summary = `<ul>${Object.entries(counts).map(([reason, count]) => {
     const label = reasonLabels[reason] ?? reason;
     return `<li>${count} target${count === 1 ? "" : "s"} skipped: ${label}</li>`;
   }).join("")}</ul>`;
+  const gateDetails = skipped
+    .map((threshold) => formatDamageGateAuditDetail(threshold, reasonLabels))
+    .filter(Boolean);
+  const detailList = gateDetails.length
+    ? `<ul>${gateDetails.map((detail) => `<li>${detail}</li>`).join("")}</ul>`
+    : "";
+  const body = summary + detailList;
   const html = await renderTemplate("systems/wwn/templates/chat/apply-damage.hbs", {
     title: "Threshold Injury Skipped",
     body,
@@ -203,6 +213,41 @@ async function renderThresholdSkippedNote(results = []) {
     whisper: ChatMessage.getWhisperRecipients("GM"),
     content: html,
   }, {});
+}
+
+function formatDamageGateAuditDetail(threshold, reasonLabels) {
+  const triggerSummary = threshold?.triggerSummary;
+  const gate = triggerSummary?.damageGate ?? threshold?.damageGate;
+  const halfMaxHp = triggerSummary?.halfMaxHp;
+  if (!gate && !halfMaxHp) return "";
+
+  const label = reasonLabels[threshold.reason] ?? threshold.reason ?? "unknown";
+  const parts = [];
+  if (gate?.formula) parts.push(`formula ${escapeHtml(gate.formula)}`);
+  if (Number.isFinite(Number(gate?.rolledTotal))) parts.push(`rolled ${Number(gate.rolledTotal)}`);
+  if (Number.isFinite(Number(gate?.minDamage)) && Number.isFinite(Number(gate?.maxDamage))) {
+    parts.push(`range ${Number(gate.minDamage)}-${Number(gate.maxDamage)}`);
+  }
+  if (Number.isFinite(Number(gate?.upperHalfCutoff))) parts.push(`cutoff ${Number(gate.upperHalfCutoff)}`);
+  if (halfMaxHp && Number.isFinite(Number(halfMaxHp.appliedDamage)) && Number.isFinite(Number(halfMaxHp.cutoff))) {
+    parts.push(`applied ${Number(halfMaxHp.appliedDamage)} vs half max HP ${Number(halfMaxHp.cutoff)}`);
+  }
+  if (triggerSummary?.triggers?.length) {
+    parts.push(`triggers ${triggerSummary.triggers.map(escapeHtml).join(", ")}`);
+  }
+
+  const target = threshold.targetName ? `${escapeHtml(threshold.targetName)}: ` : "";
+  return `${target}${label}${parts.length ? ` (${parts.join(", ")})` : ""}`;
+}
+
+function escapeHtml(value) {
+  return String(value).replace(/[&<>"']/g, (character) => ({
+    "&": "&amp;",
+    "<": "&lt;",
+    ">": "&gt;",
+    '"': "&quot;",
+    "'": "&#39;",
+  }[character]));
 }
 
 /* -------------------------------------------- */

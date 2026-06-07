@@ -304,55 +304,35 @@ export function computeAC(actor) {
  * @param {number} excess
  */
 export async function applyWounds(actor, excess) {
-  const locations = {
-    1: ["Left Arm", "Disabled", "Your arm becomes unusable. It cannot hold things and any held item is dropped.", "<b>Mangled.</b> Make a Physical save. On a failure, a limb is permanently disabled or hacked off. On a success, you merely lose a finger or toe."],
-    2: ["Right Arm", "Disabled", "Your arm becomes unusable. It cannot hold things and any held item is dropped.", "<b>Mangled.</b> Make a Physical save. On a failure, a limb is permanently disabled or hacked off. On a success, you merely lose a finger or toe."],
-    3: ["Left Leg", "Disabled", "Your leg becomes unusable. It cannot support your weight and you fall prone. Movement cut in half.", "<b>Mangled.</b> Make a Physical save. On a failure, a limb is permanently disabled or hacked off. On a success, you merely lose a finger or toe."],
-    4: ["Right Leg", "Disabled", "Your leg becomes unusable. It cannot support your weight and you fall prone. Movement cut in half.", "<b>Mangled.</b> Make a Physical save. On a failure, a limb is permanently disabled or hacked off. On a success, you merely lose a finger or toe."],
-    5: ["Torso", "Blood Loss", "Your maximum HP is reduced by 1 per HD you possess.", "<b>Crushed.</b> Make a Physical save. On a success, you gain a cool scar. On a failure, roll [[/r 1d6]]:<br />1) Permanently lose 1 Strength.<br />2) Permanently lose 1 Dexterity.<br />3) Permanently lose 1 Constitution.<br />4) Crushed throat. You cannot speak louder than a whisper.<br />5) Crushed ribs. Treat Constitution as 4 when holding your breath.<br />6) Your spine is broken and you are paralyzed from the neck down. You can attempt recovery twice: by making a Con Check after [[1d6]] days and again after [[1d6]] weeks. If you fail both, it is permanent."],
-    6: ["Torso", "Blood Loss", "Your maximum HP is reduced by 1 per HD you possess.", "<b>Crushed.</b> Make a Physical save. On a success, you gain a cool scar. On a failure, roll [[/r 1d6]]: (same as 5)"],
-    7: ["Torso", "Blood Loss", "Your maximum HP is reduced by 1 per HD you possess.", "<b>Crushed.</b> (same as 5)"],
-    8: ["Torso", "Blood Loss", "Your maximum HP is reduced by 1 per HD you possess.", "<b>Crushed.</b> (same as 5)"],
-    9: ["Head", "Concussed", "Always act last in combat. Make an Int check (DC 12) when you cast a spell to avoid it fizzling.", "<b>Skullcracked.</b> Make a Physical save. On a success, you gain a cool scar. On a failure, roll [[/r 1d6]]:<br />1) Permanently lose 1 Intelligence.<br />2) Permanently lose 1 Wisdom.<br />3) Permanently lose 1 Charisma.<br />4) Lose your left eye. -1 to Ranged Attacks.<br />5) Lose your right eye. -1 to Ranged Attacks.<br />6) Slip into a coma. You can attempt recovery twice: by making a Con Check after [[1d6]] days and again after [[1d6]] weeks. If you fail both, it is permanent."],
-    10: ["Head", "Concussed", "Always act last in combat. Make an Int check (DC 12) when you cast a spell to avoid it fizzling.", "<b>Skullcracked.</b> (same as 9)"],
-    11: ["Head", "Concussed", "Always act last in combat. Make an Int check (DC 12) when you cast a spell to avoid it fizzling.", "<b>Skullcracked.</b> (same as 9)"],
-    12: ["Head", "Concussed", "Always act last in combat. Make an Int check (DC 12) when you cast a spell to avoid it fizzling.", "<b>Skullcracked.</b> (same as 9)"],
-  };
+  // Mythras d20 hit location table.
+  const hitLocations = [
+    { range: [1, 3], result: "Right Leg", details: "Includes right hip and thigh" },
+    { range: [4, 6], result: "Left Leg", details: "Includes left hip and thigh" },
+    { range: [7, 9], result: "Abdomen", details: "Includes groin and lower torso" },
+    { range: [10, 12], result: "Chest", details: "Includes upper torso and back" },
+    { range: [13, 15], result: "Right Arm", details: "Includes right shoulder" },
+    { range: [16, 18], result: "Left Arm", details: "Includes left shoulder" },
+    { range: [19, 20], result: "Head", details: "Includes neck" },
+  ];
 
-  const locationRoll = await new Roll("1d12").evaluate();
-  const hitLocation = locations[locationRoll.total];
+  const locationRoll = await new Roll("1d20").evaluate();
+  const hitLocation = hitLocations.find((loc) => locationRoll.total >= loc.range[0] && locationRoll.total <= loc.range[1]);
   const currInjuries = actor.system.hp.injuries ?? 0;
-  const currWounds = actor.system.hp.wounds ?? 0;
   const critResistance = actor.system.critResistance ?? 0;
-  const woundRoll = await new Roll(`1d12 + ${currInjuries} + ${excess} - ${critResistance}`).evaluate();
+  const woundRoll = await new Roll(`1d12 + (2 * ${currInjuries}) + ${excess} - ${critResistance}`).evaluate();
   const woundMessage = woundRoll.result;
   const woundResult = woundRoll.total;
-  let newInjuries = 0, newWounds = 0;
-  let content = `<p><b>Location: ${hitLocation[0]}.</b></p><p><b>Severity: ${woundResult}</b> (${woundMessage}) [CR: ${critResistance}]</p><p><b>${hitLocation[1]} for ${woundResult} days.</b> ${hitLocation[2]}*</p>`;
-  if (woundResult >= 16) newWounds += woundResult - 15;
-  if (woundResult >= 11) {
-    content += `<p>${hitLocation[3]}*</p><p><b>You are unconscious.</b></p>`;
-    newInjuries++;
-    newWounds++;
-  }
-  newInjuries++;
-  content += "<p><b>* Fire/Acid/Lightning/Arcane:</b> Consult rules for alternate injuries.</p>";
+  const newInjuries = currInjuries + 1;
 
-  await actor.update({
-    "system.hp": { wounds: currWounds + newWounds, injuries: currInjuries + newInjuries },
-  });
+  await actor.update({ "system.hp.injuries": newInjuries });
 
-  content += `
-    <table>
-      <thead><tr><td/><td><b>Prev</b></td><td><b>New</b></td><td><b>Total</b></td></tr></thead>
-      <tbody>
-        <tr><td><b>Injuries</b></td><td>${currInjuries}</td><td>${newInjuries}</td><td>${actor.system.hp.injuries}</td></tr>
-        <tr><td><b>Wounds</b></td><td>${currWounds}</td><td>${newWounds}</td><td>${actor.system.hp.wounds}</td></tr>
-      </tbody>
-    </table>`;
+  const content = `
+    <p><b>Location: ${hitLocation.result}.</b> ${hitLocation.details}.</p>
+    <p><b>Severity: ${woundResult}</b> (${woundMessage}) [CR: ${critResistance}]</p>
+    <p><b>Injuries:</b> ${currInjuries} &rarr; ${newInjuries}</p>`;
 
   const template = "systems/wwn/templates/chat/apply-damage.hbs";
-  const templateData = { title: `${actor.name}: ${hitLocation[0]} Wounded!`, body: content, image: "icons/svg/blood.svg" };
+  const templateData = { title: `${actor.name}: ${hitLocation.result} Wounded!`, body: content, image: "icons/svg/blood.svg" };
   const html = await renderTemplate(template, templateData);
   await ChatMessage.create({ user: game.user.id, content: html }, {});
 }
@@ -393,10 +373,22 @@ export async function applyThresholdInjury(actor, thresholdResult, attackContext
     : thresholdResult.edge?.margin !== null
       ? `Margin ${thresholdResult.edge.margin}, Edge ${thresholdResult.edge.edge}`
       : `Edge ${thresholdResult.edge?.edge ?? 0}`;
+  const triggerLabels = {
+    natural20: "natural 20",
+    "upper-half-damage-roll": "upper-half damage roll",
+    "greater-than-half-max-hp": "damage greater than half max HP",
+  };
+  const triggerText = Array.isArray(thresholdResult.triggers) && thresholdResult.triggers.length
+    ? thresholdResult.triggers.map((trigger) => triggerLabels[trigger] ?? trigger).join(", ")
+    : "threshold trigger";
+  const chanceText = thresholdResult.autoInjury
+    ? `<p><b>Injury chance:</b> automatic (${triggerText}) [IR ${thresholdResult.injuryResistance}; ${edgeLabel}]</p>`
+    : `<p><b>Injury die:</b> ${thresholdResult.injuryRoll} vs ${thresholdResult.targetNumber}+ [IR ${thresholdResult.injuryResistance}; ${edgeLabel}]</p>`;
   const persistentText = severity.persistent ? "Persistent injury recorded." : "No persistent injury recorded.";
   const content = `
     <p><b>Source:</b> ${attackContext.sourceItemName || "Attack"}</p>
-    <p><b>Injury die:</b> ${thresholdResult.injuryRoll} vs ${thresholdResult.targetNumber}+ [IR ${thresholdResult.injuryResistance}; ${edgeLabel}]</p>
+    <p><b>Trigger:</b> ${triggerText}</p>
+    ${chanceText}
     <p><b>Severity:</b> ${severity.band} (${thresholdResult.severityFormula})</p>
     <p><b>Location:</b> ${hitLocation[0]}.</p>
     <p><b>${hitLocation[1]}.</b> ${hitLocation[2]}</p>

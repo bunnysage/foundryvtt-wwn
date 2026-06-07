@@ -182,8 +182,7 @@
         "hd": "1d6",
         "value": 4,
         "max": 4,
-        "injuries": 0,
-        "wounds": 0
+        "injuries": 0
       },
       "wp": {
         "value": 4,
@@ -292,8 +291,7 @@
         "hd": "1d8",
         "value": 4,
         "max": 4,
-        "injuries": 0,
-        "wounds": 0
+        "injuries": 0
       },
       "wp": {
         "hd": "1d8",
@@ -368,8 +366,7 @@
         "hd": "1d6",
         "value": 4,
         "max": 4,
-        "injuries": 0,
-        "wounds": 0
+        "injuries": 0
       },
       "treasure": 0,
       "personalTreasure": 0,

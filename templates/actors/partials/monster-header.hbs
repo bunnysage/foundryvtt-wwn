@@ -28,18 +28,6 @@
         <label title="{{localize 'WWN.DB'}}">{{localize 'WWN.DBShort'}}</label>
       </div>
     </li>
-    <li class="flex flex-row check-field items-center gap-1">
-      <div>
-        <input type="number" name="system.critResistance" value="{{system.critResistance}}" />
-        <label title="{{localize 'WWN.CritResist'}}">{{localize 'WWN.CR'}}</label>
-      </div>
-    </li>
-    <li class="flex flex-row check-field items-center gap-1">
-      <div>
-        <input type="number" name="system.injuryResistance" value="{{system.injuryResistance}}" min="0" step="1" data-dtype="Number" {{#unless user.isGM}}disabled{{/unless}} title="{{localize 'WWN.InjuryResistanceHint'}}" />
-        <label title="{{localize 'WWN.InjuryResistanceHint'}}">{{localize 'WWN.InjuryResistanceShort'}}</label>
-      </div>
-    </li>
     <li class="flex flex-row check-field items-center gap-1" data-check="dungeon">
       <div>
         <input type="text" name="system.details.appearing.d" value="{{system.details.appearing.d}}" />

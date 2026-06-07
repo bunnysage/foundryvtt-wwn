@@ -17,6 +17,7 @@ import {
   computeTotalPressure,
   computeWeaponPressure,
   evaluateInjuryDie,
+  evaluateThresholdTriggerSummary,
   getActorInjuryResistance,
   getTargetAac,
   isPositiveNormalAttackDamage,
@@ -721,7 +722,10 @@ export class WwnActor extends BaseDocumentMixin(Actor) {
       return { skipped: true, reason: "unsupported-actor-type" };
     }
 
-    const lookedEligible = threshold.thresholdActionId?.startsWith("normalDamage") || threshold.thresholdActionId === "straightDamage";
+    const lookedEligible = threshold.thresholdActionId?.startsWith("normalDamage")
+      || threshold.thresholdActionId === "straightDamage"
+      || threshold.thresholdActionId === "natural20CriticalDamage"
+      || threshold.thresholdActionId === "straightNatural20CriticalDamage";
     if (!lookedEligible) return null;
 
     const attackContext = threshold.attackContext;
@@ -760,6 +764,24 @@ export class WwnActor extends BaseDocumentMixin(Actor) {
       return { skipped: true, gmOnly: true, reason: "actor-update-permission-denied" };
     }
 
+    const appliedDamage = Math.floor(rawAmount * multiplier);
+    const triggerSummary = evaluateThresholdTriggerSummary({
+      naturalD20: attackContext.naturalD20,
+      action: { ...action, damageGate: action.damageGate ?? attackContext.damageGate },
+      appliedDamage,
+      targetMaxHp: preDamageHp.max,
+    });
+    if (!triggerSummary.qualifies) {
+      return {
+        skipped: true,
+        gmOnly: true,
+        reason: triggerSummary.reason,
+        targetName: this.name,
+        triggerSummary,
+        damageGate: triggerSummary.damageGate,
+      };
+    }
+
     const targetUuid = targetToken?.document?.uuid ?? targetToken?.actor?.uuid ?? this.uuid;
     const attemptKey = buildThresholdAttemptKey({
       messageUuid: threshold.messageUuid,
@@ -790,16 +812,23 @@ export class WwnActor extends BaseDocumentMixin(Actor) {
     }
 
     const injuryResistance = getActorInjuryResistance(this);
-    const targetNumber = computeInjuryTargetNumber({ injuryResistance, edge: edge.edge });
-    const injuryRoll = await new Roll("1d10").evaluate();
-    const triggered = evaluateInjuryDie({ dieResult: injuryRoll.total, targetNumber });
+    const targetNumber = triggerSummary.autoInjury
+      ? null
+      : computeInjuryTargetNumber({ injuryResistance, edge: edge.edge });
+    const injuryRoll = triggerSummary.autoInjury ? null : await new Roll("1d10").evaluate();
+    const triggered = triggerSummary.autoInjury
+      ? true
+      : evaluateInjuryDie({ dieResult: injuryRoll.total, targetNumber });
 
     const baseResult = {
       skipped: false,
       triggered,
       targetName: this.name,
-      injuryRoll: injuryRoll.total,
+      injuryRoll: injuryRoll?.total ?? null,
       targetNumber,
+      autoInjury: triggerSummary.autoInjury,
+      triggers: triggerSummary.triggers,
+      triggerSummary,
       edge,
       injuryResistance,
       sourceItemName: attackContext.sourceItemName,

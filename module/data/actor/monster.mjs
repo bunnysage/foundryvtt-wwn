@@ -23,7 +23,6 @@ export const WwnMonsterDataModel =
               value: new fields.NumberField({ min: 0, initial: 4 }),
               max: new fields.NumberField({ min: 0, initial: 4 }),
               injuries: new fields.NumberField({ min: 0, initial: 0 }),
-              wounds: new fields.NumberField({ min: 0, initial: 0 }),
             }),
             details: new fields.SchemaField({
               biography: new fields.StringField({ initial: "" }),

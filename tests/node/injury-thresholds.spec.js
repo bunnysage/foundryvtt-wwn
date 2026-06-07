@@ -3,15 +3,21 @@ import { expect } from "chai";
 import {
   THRESHOLD_ACTION_FAMILY_NORMAL_DAMAGE,
   THRESHOLD_CONTEXT_SCHEMA_VERSION,
+  buildThresholdAttackActions,
   buildThresholdAttemptKey,
   computeEdge,
   computeExistingInjuryPressure,
+  computeDamageRange,
   computeHealthPressure,
   computeInjuryTargetNumber,
   computeSeverityBand,
   computeTotalPressure,
+  computeUpperHalfCutoff,
   computeWeaponPressure,
   evaluateInjuryDie,
+  evaluateThresholdDamageGate,
+  evaluateThresholdTriggerSummary,
+  evaluateTrustedThresholdDamageGate,
   isPositiveNormalAttackDamage,
   isValidAttackContext,
   maxWeaponDamage,
@@ -28,10 +34,11 @@ describe("module/injury-thresholds.mjs", () => {
   });
 
   it("computes injury targets from resistance and edge", () => {
-    expect(computeInjuryTargetNumber({ injuryResistance: 0, edge: 0 })).to.equal(8);
-    expect(computeInjuryTargetNumber({ injuryResistance: 1, edge: 1 })).to.equal(8);
-    expect(computeInjuryTargetNumber({ injuryResistance: 2, edge: 2 })).to.equal(8);
-    expect(computeInjuryTargetNumber({ injuryResistance: 3, edge: 0 })).to.equal(11);
+    expect(computeInjuryTargetNumber({ injuryResistance: 0, edge: 0 })).to.equal(9);
+    expect(computeInjuryTargetNumber({ injuryResistance: 1, edge: 1 })).to.equal(9);
+    expect(computeInjuryTargetNumber({ injuryResistance: 2, edge: 2 })).to.equal(9);
+    expect(computeInjuryTargetNumber({ injuryResistance: 3, edge: 0 })).to.equal(12);
+    expect(computeInjuryTargetNumber({ base: 8, injuryResistance: 3, edge: 0 })).to.equal(11);
   });
 
   it("allows target numbers above 10 to be impossible on a d10", () => {
@@ -48,12 +55,12 @@ describe("module/injury-thresholds.mjs", () => {
     expect(computeEdge({ attackTotal: 15, targetAac: 16, naturalD20: 20 })).to.include({ eligible: true, edge: 3, source: "natural20" });
   });
 
-  it("uses natural 20 edge 3 without automatic injury", () => {
+  it("keeps natural 20 edge math available for severity context", () => {
     const edge = computeEdge({ attackTotal: 15, targetAac: 16, naturalD20: 20 });
     const targetNumber = computeInjuryTargetNumber({ injuryResistance: 3, edge: edge.edge });
-    expect(targetNumber).to.equal(8);
-    expect(evaluateInjuryDie({ dieResult: 7, targetNumber })).to.equal(false);
-    expect(evaluateInjuryDie({ dieResult: 8, targetNumber })).to.equal(true);
+    expect(targetNumber).to.equal(9);
+    expect(evaluateInjuryDie({ dieResult: 8, targetNumber })).to.equal(false);
+    expect(evaluateInjuryDie({ dieResult: 9, targetNumber })).to.equal(true);
   });
 
   it("computes weapon pressure from base weapon maximums", () => {
@@ -67,6 +74,218 @@ describe("module/injury-thresholds.mjs", () => {
     expect(computeWeaponPressure("1d12")).to.equal(1);
     expect(computeWeaponPressure("2d6")).to.equal(1);
     expect(computeWeaponPressure("not a formula")).to.equal(0);
+  });
+
+  it("computes additive damage ranges and upper-half cutoffs", () => {
+    expect(computeDamageRange("1d8 + 1")).to.deep.equal({
+      minDamage: 2,
+      maxDamage: 9,
+      upperHalfCutoff: 6,
+    });
+    expect(computeDamageRange("2d6")).to.deep.equal({
+      minDamage: 2,
+      maxDamage: 12,
+      upperHalfCutoff: 7,
+    });
+    expect(computeDamageRange("2d4 - 1")).to.deep.equal({
+      minDamage: 1,
+      maxDamage: 7,
+      upperHalfCutoff: 4,
+    });
+    expect(computeDamageRange("1d6 + 2 + 1")).to.deep.equal({
+      minDamage: 4,
+      maxDamage: 9,
+      upperHalfCutoff: 7,
+    });
+    expect(computeDamageRange("d6 + 1")).to.deep.equal({
+      minDamage: 2,
+      maxDamage: 7,
+      upperHalfCutoff: 5,
+    });
+    expect(computeDamageRange("1d8+-1")).to.deep.equal({
+      minDamage: 0,
+      maxDamage: 7,
+      upperHalfCutoff: 4,
+    });
+    expect(computeDamageRange("1d8--1")).to.equal(null);
+    expect(computeUpperHalfCutoff({ minDamage: 2, maxDamage: 9 })).to.equal(6);
+  });
+
+  it("evaluates threshold damage gates from original roll totals", () => {
+    expect(evaluateThresholdDamageGate({ formula: "1d8 + 1", rolledTotal: 6 })).to.include({
+      qualifies: true,
+      supported: true,
+      reason: null,
+      rolledTotal: 6,
+      minDamage: 2,
+      maxDamage: 9,
+      upperHalfCutoff: 6,
+    });
+    expect(evaluateThresholdDamageGate({ formula: "1d8 + 1", rolledTotal: 5 })).to.include({
+      qualifies: false,
+      supported: true,
+      reason: "lower-half-threshold-damage-roll",
+      rolledTotal: 5,
+      minDamage: 2,
+      maxDamage: 9,
+      upperHalfCutoff: 6,
+    });
+    expect(evaluateThresholdDamageGate({ formula: "1d6 * 2", rolledTotal: 8 })).to.include({
+      qualifies: false,
+      supported: false,
+      reason: "unsupported-threshold-damage-range",
+      formula: "1d6 * 2",
+      rolledTotal: 8,
+    });
+  });
+
+  it("requires trusted threshold damage gate metadata at runtime", () => {
+    const trusted = evaluateTrustedThresholdDamageGate({
+      qualifies: true,
+      supported: true,
+      formula: "2d6",
+      rolledTotal: 7,
+      minDamage: 2,
+      maxDamage: 12,
+      upperHalfCutoff: 7,
+    });
+    expect(trusted).to.include({
+      qualifies: true,
+      supported: true,
+      formula: "2d6",
+      rolledTotal: 7,
+      minDamage: 2,
+      maxDamage: 12,
+      upperHalfCutoff: 7,
+    });
+
+    const missing = evaluateTrustedThresholdDamageGate();
+    expect(missing).to.include({
+      qualifies: false,
+      supported: false,
+      reason: "unsupported-threshold-damage-range",
+      formula: "",
+      rolledTotal: null,
+    });
+  });
+
+  it("summarizes upper-half formula threshold triggers", () => {
+    const summary = evaluateThresholdTriggerSummary({
+      naturalD20: 14,
+      action: { damageGate: evaluateThresholdDamageGate({ formula: "1d8 + 1", rolledTotal: 6 }) },
+      appliedDamage: 6,
+      targetMaxHp: 20,
+    });
+
+    expect(summary).to.include({
+      qualifies: true,
+      autoInjury: false,
+      reason: null,
+    });
+    expect(summary.triggers).to.deep.equal(["upper-half-damage-roll"]);
+    expect(summary.damageGate).to.include({ supported: true, qualifies: true, upperHalfCutoff: 6 });
+    expect(summary.halfMaxHp).to.include({ qualifies: false, appliedDamage: 6, targetMaxHp: 20, cutoff: 10 });
+  });
+
+  it("summarizes greater-than-half-max-HP threshold triggers with strict boundary", () => {
+    expect(evaluateThresholdTriggerSummary({
+      action: { damageGate: evaluateThresholdDamageGate({ formula: "1d8 + 1", rolledTotal: 4 }) },
+      appliedDamage: 11,
+      targetMaxHp: 20,
+    }).triggers).to.deep.equal(["greater-than-half-max-hp"]);
+
+    const boundary = evaluateThresholdTriggerSummary({
+      action: { damageGate: evaluateThresholdDamageGate({ formula: "1d8 + 1", rolledTotal: 4 }) },
+      appliedDamage: 10,
+      targetMaxHp: 20,
+    });
+    expect(boundary).to.include({ qualifies: false, autoInjury: false, reason: "no-threshold-trigger" });
+    expect(boundary.halfMaxHp).to.include({ qualifies: false, appliedDamage: 10, targetMaxHp: 20, cutoff: 10 });
+
+    expect(evaluateThresholdTriggerSummary({
+      appliedDamage: 10.5,
+      targetMaxHp: 20,
+    }).triggers).to.deep.equal(["greater-than-half-max-hp"]);
+  });
+
+  it("allows unsupported formula metadata to qualify through half max HP", () => {
+    const summary = evaluateThresholdTriggerSummary({
+      action: { damageGate: evaluateThresholdDamageGate({ formula: "1d6 * 2", rolledTotal: 12 }) },
+      appliedDamage: 12,
+      targetMaxHp: 20,
+    });
+
+    expect(summary).to.include({ qualifies: true, autoInjury: false, reason: null });
+    expect(summary.triggers).to.deep.equal(["greater-than-half-max-hp"]);
+    expect(summary.damageGate).to.include({
+      supported: false,
+      qualifies: false,
+      reason: "unsupported-threshold-damage-range",
+    });
+  });
+
+  it("reports unsupported formula and no half max HP trigger as no trigger", () => {
+    const summary = evaluateThresholdTriggerSummary({
+      action: { damageGate: evaluateThresholdDamageGate({ formula: "1d6 * 2", rolledTotal: 6 }) },
+      appliedDamage: 6,
+      targetMaxHp: 20,
+    });
+
+    expect(summary).to.include({ qualifies: false, autoInjury: false, reason: "no-threshold-trigger" });
+    expect(summary.triggers).to.deep.equal([]);
+    expect(summary.damageGate).to.include({ supported: false, reason: "unsupported-threshold-damage-range" });
+  });
+
+  it("marks natural 20 trigger summaries as automatic threshold injuries", () => {
+    const summary = evaluateThresholdTriggerSummary({
+      naturalD20: 20,
+      action: { natural20Critical: true, damageGate: evaluateThresholdDamageGate({ formula: "2d6", rolledTotal: 10 }) },
+      appliedDamage: 20,
+      targetMaxHp: 20,
+    });
+
+    expect(summary).to.include({ qualifies: true, autoInjury: true, reason: null });
+    expect(summary.triggers).to.deep.equal([
+      "natural20",
+      "upper-half-damage-roll",
+      "greater-than-half-max-hp",
+    ]);
+  });
+
+  it("builds distinct trusted action metadata for natural 20 critical damage", () => {
+    const damageGate = evaluateThresholdDamageGate({ formula: "1d8", rolledTotal: 8 });
+    const actions = buildThresholdAttackActions({
+      normalDamage: 8,
+      straightDamage: 3,
+      damageGate,
+      naturalD20: 20,
+    });
+
+    expect(actions.natural20CriticalDamage).to.include({
+      domAction: "apply-damage",
+      actionFamily: THRESHOLD_ACTION_FAMILY_NORMAL_DAMAGE,
+      damageKind: "normal",
+      amount: 8,
+      multiplier: 2,
+      natural20Critical: true,
+    });
+    expect(actions.normalDamageDouble).to.include({ amount: 8, multiplier: 2 });
+    expect(actions.normalDamageDouble.natural20Critical).to.equal(undefined);
+    expect(actions.straightNatural20CriticalDamage).to.include({
+      amount: 3,
+      multiplier: 2,
+      natural20Critical: true,
+    });
+  });
+
+  it("omits natural 20 critical action metadata for non-critical attacks", () => {
+    const actions = buildThresholdAttackActions({
+      normalDamage: 8,
+      damageGate: evaluateThresholdDamageGate({ formula: "1d8", rolledTotal: 8 }),
+      naturalD20: 19,
+    });
+
+    expect(actions.natural20CriticalDamage).to.equal(undefined);
   });
 
   it("computes health, injury, and capped total pressure", () => {
@@ -167,5 +386,37 @@ describe("module/injury-thresholds.mjs", () => {
       amount: 4,
       multiplier: 1,
     }).reason).to.equal("threshold-action-amount-mismatch");
+  });
+
+  it("validates dedicated natural 20 critical action metadata", () => {
+    const attackContext = {
+      actions: buildThresholdAttackActions({
+        normalDamage: 8,
+        damageGate: evaluateThresholdDamageGate({ formula: "1d8", rolledTotal: 8 }),
+        naturalD20: 20,
+      }),
+    };
+
+    const trusted = resolveTrustedThresholdAction({
+      attackContext,
+      actionId: "natural20CriticalDamage",
+      domAction: "apply-damage",
+      amount: 8,
+      multiplier: 2,
+    });
+
+    expect(trusted.action).to.include({
+      actionFamily: THRESHOLD_ACTION_FAMILY_NORMAL_DAMAGE,
+      damageKind: "normal",
+      natural20Critical: true,
+      multiplier: 2,
+    });
+    expect(resolveTrustedThresholdAction({
+      attackContext,
+      actionId: "natural20CriticalDamage",
+      domAction: "apply-damage",
+      amount: 8,
+      multiplier: 1,
+    }).reason).to.equal("threshold-action-multiplier-mismatch");
   });
 });
