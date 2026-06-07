@@ -189,13 +189,33 @@ export const registerSettings = function () {
   });
 
   game.settings.register("wwn", "replaceStrainWithWounds", {
-    name: "Replace Strain with Wounds",
-    hint: "Removes System Strain from the sheet and replaces it with a tracker for Injuries and Wounds from the Death and Dismemberment rules published by Goblin Punch. Additionally, this enables automatic calculation of such injuries, should damage reduce a character's HP below 0.",
+    name: "Use Wounds with Strain",
+    hint: "Adds Injuries and Wounds tracking from the Death and Dismemberment rules published by Goblin Punch while keeping System Strain visible. Additionally, this enables automatic calculation of such injuries, should damage reduce a character's or monster's HP below 0.",
     default: false,
     scope: "world",
     type: Boolean,
     config: true,
     requiresReload: false
+  });
+
+  game.settings.register("wwn", "enableWoundPoints", {
+    name: game.i18n.localize("WWN.Setting.EnableWoundPoints"),
+    hint: game.i18n.localize("WWN.Setting.EnableWoundPointsHint"),
+    default: false,
+    scope: "world",
+    type: Boolean,
+    config: true,
+    requiresReload: false
+  });
+
+  game.settings.register("wwn", "thresholdInjuries", {
+    name: game.i18n.localize("WWN.Setting.ThresholdInjuries"),
+    hint: game.i18n.localize("WWN.Setting.ThresholdInjuriesHint"),
+    default: false,
+    scope: "world",
+    type: Boolean,
+    config: true,
+    requiresReload: true
   });
 
   game.settings.register("wwn", "roundWeight", {
