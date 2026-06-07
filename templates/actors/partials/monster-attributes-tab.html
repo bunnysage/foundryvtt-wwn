@@ -57,33 +57,22 @@
                 </li>
                 {{#if (or config.replaceStrainWithWounds config.thresholdInjuries)}}
                 <li class="attribute">
-                    <h4 class="attribute-name box-title" title="{{ localize 'WWN.InjuryResistance' }}">
-                        {{ localize "WWN.InjuryResistanceShort" }}</h4>
-                    <div class="attribute-value">
+                    <h4 class="attribute-name box-title" title="Injury Resistance / Crit Resistance">IR/CR</h4>
+                    <div class="attribute-value flexrow">
                         <input name="system.injuryResistance" type="number" value="{{system.injuryResistance}}"
-                            data-dtype="Number" placeholder="0" />
-                    </div>
-                </li>
-                {{/if}}
-                {{#if config.replaceStrainWithWounds}}
-                <li class="attribute">
-                    <h4 class="attribute-name box-title" title="{{ localize 'WWN.CriticalResistance' }}">
-                        {{ localize "WWN.CriticalResistanceShort" }}</h4>
-                    <div class="attribute-value">
+                            data-dtype="Number" placeholder="0" title="{{ localize 'WWN.InjuryResistanceHint' }}" />
+                        <span class="sep"> / </span>
                         <input name="system.critResistance" type="number" value="{{system.critResistance}}"
-                            data-dtype="Number" placeholder="0" />
+                            data-dtype="Number" placeholder="0" title="{{ localize 'WWN.CriticalResistanceHint' }}" />
                     </div>
                 </li>
                 {{/if}}
                 {{#if (or config.replaceStrainWithWounds config.thresholdInjuries)}}
                 <li class="attribute">
-                    <h4 class="attribute-name box-title" title="Injuries / Wounds">I/W</h4>
-                    <div class="attribute-value flexrow">
+                    <h4 class="attribute-name box-title" title="Injuries">I</h4>
+                    <div class="attribute-value">
                         <input name="system.hp.injuries" type="number" value="{{system.hp.injuries}}"
                             data-dtype="Number" placeholder="0" />
-                        <span class="sep"> / </span>
-                        <input name="system.hp.wounds" type="number" value="{{system.hp.wounds}}" data-dtype="Number"
-                            placeholder="0" />
                     </div>
                 </li>
                 {{/if}}

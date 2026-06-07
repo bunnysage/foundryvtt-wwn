@@ -151,22 +151,14 @@
 
       {{#if (or config.replaceStrainWithWounds config.thresholdInjuries)}}
       <li class="attribute ability-score">
-        <h4 class="attribute-name box-title" title="{{ localize 'WWN.InjuryResistance' }}">
-          {{ localize "WWN.InjuryResistanceShort" }}
+        <h4 class="attribute-name box-title" data-tooltip="Injury Resistance / Crit Resistance">
+          IR/CR
         </h4>
         <div class="attribute-value">
           <input name="system.injuryResistance" type="number" value="{{system.injuryResistance}}" data-dtype="Number"
             placeholder=0 title="{{ localize 'WWN.InjuryResistanceHint' }}" />
         </div>
-      </li>
-      {{/if}}
-
-      {{#if config.replaceStrainWithWounds}}
-      <li class="attribute ability-score">
-        <h4 class="attribute-name box-title" title="{{ localize 'WWN.CriticalResistance' }}">
-          {{ localize "WWN.CriticalResistanceShort" }}
-        </h4>
-        <div class="attribute-value">
+        <div class="attribute-value attribute-mod">
           <input name="system.critResistance" type="number" value="{{system.critResistance}}" data-dtype="Number"
             placeholder=0 title="{{ localize 'WWN.CriticalResistanceHint' }}" />
         </div>
@@ -176,17 +168,13 @@
       {{#if (or config.replaceStrainWithWounds config.thresholdInjuries)}}
       <li class="attribute ability-score">
         <h4 class="attribute-name box-title"
-          data-tooltip="Injuries and Fatal Wounds. Hover over each to see their effects.">
-          I/W
+          data-tooltip="Injuries. Damage in excess of your HP, along with your current injuries, are added to a die roll to determine the severity of your next injury.">
+          I
         </h4>
         <div class="attribute-value">
           <input name="system.hp.injuries" type="number" value="{{system.hp.injuries}}" data-dtype="Number"
             placeholder=0
             data-tooltip="Injuries. Damage in excess of your HP, along with your current injuries, are added to a die roll to determine the severity of your next injury." />
-        </div>
-        <div class="attribute-value attribute-mod">
-          <input name="system.hp.wounds" type="number" value="{{system.hp.wounds}}" data-dtype="Number" placeholder=0
-            data-tooltip="Fatal Wounds. You have 3 rounds in which to remove all of your fatal wounds or perish." />
         </div>
       </li>
       {{/if}}

@@ -20,7 +20,7 @@ test("characters and monsters define local mechanic fields", () => {
     assert.equal(actor.critResistance, 0);
     assert.equal(actor.injuryResistance, 0);
     assert.equal(actor.hp.injuries, 0);
-    assert.equal(actor.hp.wounds, 0);
+    assert.equal(actor.hp.wounds, undefined);
   }
 });
 
@@ -36,21 +36,23 @@ test("monster strain defaults exist without removing current 1.6.1 fields", () =
 test("local mechanics are opt-in world settings", () => {
   assert.match(settingsSource, /game\.settings\.register\("wwn", "enableWoundPoints"/);
   assert.match(settingsSource, /game\.settings\.register\("wwn", "thresholdInjuries"/);
-  assert.match(settingsSource, /name: "Use Wounds with Strain"/);
+  assert.match(settingsSource, /name: "Use Injuries with Strain"/);
   assert.doesNotMatch(settingsSource, /Removes System Strain/);
   assert.match(settingsSource, /default: false/);
   assert.match(settingsSource, /scope: "world"/);
 });
 
-test("wound rule sheet fields are additive with system strain", () => {
-  assert.match(characterAttributesTemplate, /name="system\.hp\.injuries"[\s\S]*?name="system\.hp\.wounds"/);
+test("injury rule sheet fields are additive with system strain", () => {
+  assert.match(characterAttributesTemplate, /name="system\.hp\.injuries"/);
+  assert.doesNotMatch(characterAttributesTemplate, /name="system\.hp\.wounds"/);
   assert.match(characterAttributesTemplate, /name="system\.details\.strain\.value"[\s\S]*?name="system\.details\.strain\.max"/);
   assert.doesNotMatch(
     characterAttributesTemplate,
     /\{\{#unless config\.replaceStrainWithWounds\}\}[\s\S]*?system\.details\.strain\.value/,
   );
 
-  assert.match(monsterAttributesTemplate, /name="system\.hp\.injuries"[\s\S]*?name="system\.hp\.wounds"/);
+  assert.match(monsterAttributesTemplate, /name="system\.hp\.injuries"/);
+  assert.doesNotMatch(monsterAttributesTemplate, /name="system\.hp\.wounds"/);
   assert.match(
     monsterAttributesTemplate,
     /\{\{#if config\.replaceStrainWithWounds\}\}[\s\S]*?system\.details\.strain\.value[\s\S]*?system\.details\.strain\.max[\s\S]*?\{\{\/if\}\}/,

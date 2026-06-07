@@ -863,85 +863,20 @@ export class WwnActor extends Actor {
   }
 
   async applyWounds(excess) {
-    const locations = {
-      1: [
-        "Left Arm",
-        "Disabled",
-        "Your arm becomes unusable. It cannot hold things and any held item is dropped.",
-        "<b>Mangled.</b> Make a Physical save. On a failure, a limb is permanently disabled or hacked off. On a success, you merely lose a finger or toe.",
-      ],
-      2: [
-        "Right Arm",
-        "Disabled",
-        "Your arm becomes unusable. It cannot hold things and any held item is dropped.",
-        "<b>Mangled.</b> Make a Physical save. On a failure, a limb is permanently disabled or hacked off. On a success, you merely lose a finger or toe.",
-      ],
-      3: [
-        "Left Leg",
-        "Disabled",
-        "Your leg becomes unusable. It cannot support your weight and you fall prone. Movement cut in half.",
-        "<b>Mangled.</b> Make a Physical save. On a failure, a limb is permanently disabled or hacked off. On a success, you merely lose a finger or toe.",
-      ],
-      4: [
-        "Right Leg",
-        "Disabled",
-        "Your leg becomes unusable. It cannot support your weight and you fall prone. Movement cut in half.",
-        "<b>Mangled.</b> Make a Physical save. On a failure, a limb is permanently disabled or hacked off. On a success, you merely lose a finger or toe.",
-      ],
-      5: [
-        "Torso",
-        "Blood Loss",
-        "Your maximum HP is reduced by 1 per HD you possess.",
-        "<b>Crushed.</b> Make a Physical save. On a success, you gain a cool scar. On a failure, roll [[/r 1d6]]:<br />1) Permanently lose 1 Strength.<br />2) Permanently lose 1 Dexterity.<br />3) Permanently lose 1 Constitution.<br />4) Crushed throat. You cannot speak louder than a whisper.<br />5) Crushed ribs. Treat Constitution as 4 when holding your breath.<br />6) Your spine is broken and you are paralyzed from the neck down. You can attempt recovery twice: by making a Con Check after [[1d6]] days and again after [[1d6]] weeks. If you fail both, it is permanent.",
-      ],
-      6: [
-        "Torso",
-        "Blood Loss",
-        "Your maximum HP is reduced by 1 per HD you possess.",
-        "<b>Crushed.</b> Make a Physical save. On a success, you gain a cool scar. On a failure, roll [[/r 1d6]]:<br />1) Permanently lose 1 Strength.<br />2) Permanently lose 1 Dexterity.<br />3) Permanently lose 1 Constitution.<br />4) Crushed throat. You cannot speak louder than a whisper.<br />5) Crushed ribs. Treat Constitution as 4 when holding your breath.<br />6) Your spine is broken and you are paralyzed from the neck down. You can attempt recovery twice: by making a Con Check after [[1d6]] days and again after [[1d6]] weeks. If you fail both, it is permanent.",
-      ],
-      7: [
-        "Torso",
-        "Blood Loss",
-        "Your maximum HP is reduced by 1 per HD you possess.",
-        "<b>Crushed.</b> Make a Physical save. On a success, you gain a cool scar. On a failure, roll [[/r 1d6]]:<br />1) Permanently lose 1 Strength.<br />2) Permanently lose 1 Dexterity.<br />3) Permanently lose 1 Constitution.<br />4) Crushed throat. You cannot speak louder than a whisper.<br />5) Crushed ribs. Treat Constitution as 4 when holding your breath.<br />6) Your spine is broken and you are paralyzed from the neck down. You can attempt recovery twice: by making a Con Check after [[1d6]] days and again after [[1d6]] weeks. If you fail both, it is permanent.",
-      ],
-      8: [
-        "Torso",
-        "Blood Loss",
-        "Your maximum HP is reduced by 1 per HD you possess.",
-        "<b>Crushed.</b> Make a Physical save. On a success, you gain a cool scar. On a failure, roll [[/r 1d6]]:<br />1) Permanently lose 1 Strength.<br />2) Permanently lose 1 Dexterity.<br />3) Permanently lose 1 Constitution.<br />4) Crushed throat. You cannot speak louder than a whisper.<br />5) Crushed ribs. Treat Constitution as 4 when holding your breath.<br />6) Your spine is broken and you are paralyzed from the neck down. You can attempt recovery twice: by making a Con Check after [[1d6]] days and again after [[1d6]] weeks. If you fail both, it is permanent.",
-      ],
-      9: [
-        "Head",
-        "Concussed",
-        "Always act last in combat. Make an Int check (DC 12) when you cast a spell to avoid it fizzling.",
-        "<b>Skullcracked.</b> Make a Physical save. On a success, you gain a cool scar. On a failure, roll [[/r 1d6]]:<br />1) Permanently lose 1 Intelligence.<br />2) Permanently lose 1 Wisdom.<br />3) Permanently lose 1 Charisma.<br />4) Lose your left eye. -1 to Ranged Attacks.<br />5) Lose your right eye. -1 to Ranged Attacks.<br />6) Slip into a coma. You can attempt recovery twice: by making a Con Check after [[1d6]] days and again after [[1d6]] weeks. If you fail both, it is permanent.",
-      ],
-      10: [
-        "Head",
-        "Concussed",
-        "Always act last in combat. Make an Int check (DC 12) when you cast a spell to avoid it fizzling.",
-        "<b>Skullcracked.</b> Make a Physical save. On a success, you gain a cool scar. On a failure, roll [[/r 1d6]]:<br />1) Permanently lose 1 Intelligence.<br />2) Permanently lose 1 Wisdom.<br />3) Permanently lose 1 Charisma.<br />4) Lose your left eye. -1 to Ranged Attacks.<br />5) Lose your right eye. -1 to Ranged Attacks.<br />6) Slip into a coma. You can attempt recovery twice: by making a Con Check after [[1d6]] days and again after [[1d6]] weeks. If you fail both, it is permanent.",
-      ],
-      11: [
-        "Head",
-        "Concussed",
-        "Always act last in combat. Make an Int check (DC 12) when you cast a spell to avoid it fizzling.",
-        "<b>Skullcracked.</b> Make a Physical save. On a success, you gain a cool scar. On a failure, roll [[/r 1d6]]:<br />1) Permanently lose 1 Intelligence.<br />2) Permanently lose 1 Wisdom.<br />3) Permanently lose 1 Charisma.<br />4) Lose your left eye. -1 to Ranged Attacks.<br />5) Lose your right eye. -1 to Ranged Attacks.<br />6) Slip into a coma. You can attempt recovery twice: by making a Con Check after [[1d6]] days and again after [[1d6]] weeks. If you fail both, it is permanent.",
-      ],
-      12: [
-        "Head",
-        "Concussed",
-        "Always act last in combat. Make an Int check (DC 12) when you cast a spell to avoid it fizzling.",
-        "<b>Skullcracked.</b> Make a Physical save. On a success, you gain a cool scar. On a failure, roll [[/r 1d6]]:<br />1) Permanently lose 1 Intelligence.<br />2) Permanently lose 1 Wisdom.<br />3) Permanently lose 1 Charisma.<br />4) Lose your left eye. -1 to Ranged Attacks.<br />5) Lose your right eye. -1 to Ranged Attacks.<br />6) Slip into a coma. You can attempt recovery twice: by making a Con Check after [[1d6]] days and again after [[1d6]] weeks. If you fail both, it is permanent.",
-      ],
-    };
+    // Mythras d20 hit location table.
+    const hitLocations = [
+      { range: [1, 3], result: "Right Leg", details: "Includes right hip and thigh" },
+      { range: [4, 6], result: "Left Leg", details: "Includes left hip and thigh" },
+      { range: [7, 9], result: "Abdomen", details: "Includes groin and lower torso" },
+      { range: [10, 12], result: "Chest", details: "Includes upper torso and back" },
+      { range: [13, 15], result: "Right Arm", details: "Includes right shoulder" },
+      { range: [16, 18], result: "Left Arm", details: "Includes left shoulder" },
+      { range: [19, 20], result: "Head", details: "Includes neck" },
+    ];
 
-    const locationRoll = await new Roll("1d12").evaluate();
-    const hitLocation = locations[locationRoll.total];
+    const locationRoll = await new Roll("1d20").evaluate();
+    const hitLocation = hitLocations.find((loc) => locationRoll.total >= loc.range[0] && locationRoll.total <= loc.range[1]);
     const currInjuries = Number(this.system.hp?.injuries ?? 0) || 0;
-    const currWounds = Number(this.system.hp?.wounds ?? 0) || 0;
     const critResistance = normalizeCriticalResistance(this.system.critResistance);
     const woundRoll = await new Roll(buildBelowZeroWoundFormula({
       currentInjuries: currInjuries,
@@ -951,61 +886,15 @@ export class WwnActor extends Actor {
     const woundMessage = woundRoll.result;
     const woundResult = woundRoll.total;
     const template = "systems/wwn/templates/chat/apply-damage.html";
-    let newInjuries = 0;
-    let newWounds = 0;
     const critResistanceText = critResistance > 0 ? ` [CR -${critResistance}]` : "";
+    const newInjuries = currInjuries + 1;
 
-    let content = `<p><b>Location: ${hitLocation[0]}.</b></p><p><b>Severity: ${woundResult}</b> (${woundMessage})${critResistanceText}</p><p><b>${hitLocation[1]} for ${woundResult} days.</b> ${hitLocation[2]}*</p>`;
+    await this.update({ "system.hp.injuries": newInjuries });
 
-    if (woundResult >= 16) {
-      newWounds += woundResult - 15;
-    }
-    if (woundResult >= 11) {
-      content += `<p>${hitLocation[3]}*</p><p><b>You are unconscious.</b></p>`;
-      newInjuries++;
-      newWounds++;
-    }
-    newInjuries++;
-
-    content +=
-      "<p><b>* Fire/Acid/Lightning/Arcane:</b> Consult rules for alternate injuries.</p>";
-
-    const totalInjuries = currInjuries + newInjuries;
-    const totalWounds = currWounds + newWounds;
-
-    await this.update({
-      "system.hp.wounds": totalWounds,
-      "system.hp.injuries": totalInjuries,
-    });
-
-    content += `
-      <table>
-        <thead>
-          <tr>
-            <td />
-            <td><b>Prev</b></td>
-            <td><b>New</b></td>
-            <td><b>Total</b></td>
-          </tr>
-        </thead>
-        <tbody>
-          <tr>
-            <td><b>Injuries</b></td>
-            <td>${currInjuries}</td>
-            <td>${newInjuries}</td>
-            <td>${totalInjuries}</td>
-          </tr>
-          <tr>
-            <td><b>Wounds</b></td>
-            <td>${currWounds}</td>
-            <td>${newWounds}</td>
-            <td>${totalWounds}</td>
-          </tr>
-        </tbody>
-      </table>`;
+    const content = `<p><b>Location: ${hitLocation.result}.</b> ${hitLocation.details}.</p><p><b>Severity: ${woundResult}</b> (${woundMessage})${critResistanceText}</p><p><b>Injuries:</b> ${currInjuries} &rarr; ${newInjuries}</p>`;
 
     const templateData = {
-      title: `${this.name}: ${hitLocation[0]} Wounded!`,
+      title: `${this.name}: ${hitLocation.result} Wounded!`,
       body: content,
       image: "icons/svg/blood.svg"
     };

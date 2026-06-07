@@ -57,6 +57,6 @@ test("critical resistance normalizes invalid values to zero", () => {
 test("below-zero wound formula subtracts critical resistance", () => {
   assert.equal(
     buildBelowZeroWoundFormula({ currentInjuries: 1, excessDamage: 4, critResistance: 2 }),
-    "1d12 + 1 + 4 - 2",
+    "1d12 + (2 * 1) + 4 - 2",
   );
 });

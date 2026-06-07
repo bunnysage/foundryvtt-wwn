@@ -43,5 +43,5 @@ export function computeWoundPointsAfterExcess({ wpValue = 0, wpMax = 0, excessDa
 }
 
 export function buildBelowZeroWoundFormula({ currentInjuries = 0, excessDamage = 0, critResistance = 0 } = {}) {
-  return `1d12 + ${Math.max(0, Math.floor(finiteNumber(currentInjuries, 0)))} + ${Math.max(0, Math.floor(finiteNumber(excessDamage, 0)))} - ${normalizeCriticalResistance(critResistance)}`;
+  return `1d12 + (2 * ${Math.max(0, Math.floor(finiteNumber(currentInjuries, 0)))}) + ${Math.max(0, Math.floor(finiteNumber(excessDamage, 0)))} - ${normalizeCriticalResistance(critResistance)}`;
 }
